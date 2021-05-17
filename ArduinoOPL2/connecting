@@ -1,0 +1,25 @@
+#!/bin/sh
+
+if ! type "gpio" > /dev/null
+then
+	echo "WiringPi was not found!"
+	echo "Please run the build script to install the OPL2 library first."
+	echo ""
+	exit
+fi
+
+echo ""
+echo "Connect the OPL2 Audio Board to your Raspberry Pi like this:"
+echo ""
+echo "+------------+------+"
+echo "| OPL2 Board | GPIO |\tGPIO header orientation:"
+echo "+------------+------+"
+echo "|      Reset |\033[1m  13  \033[0m|\t                     \033[1;32m|\033[0m"
+echo "|      Shift |\033[1m  23  \033[0m|\t        ...\033[1m 5 3 1    \033[1;32m|\033[0m"
+echo "|      Latch |\033[1m  15  \033[0m|\t       -----------+  \033[1;32m|\033[0m"
+echo "|       Data |\033[1m  19  \033[0m|\t      \033[1;33m  o o o o o \033[0m|  \033[1;32m|\033[0m"
+echo "|         A0 |\033[1m  16  \033[0m|\t     \033[1;33m o o o o o o \033[0m|  \033[1;32m|\033[0m"
+echo "|        GND |\033[1m   6  \033[0m|\t     -------------+  \033[1;32m|\033[0m"
+echo "|        +5v |\033[1m   2  \033[0m|\t        ...\033[1m 6 4 2    \033[1;32m|\033[0m  <-- Raspberry Pi"
+echo "+------------+------+\t  \033[1;32m------------------'\033[0m       board edge"
+echo ""

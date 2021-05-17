@@ -1,0 +1,47 @@
+# Usage:
+#
+#   verify/upload target sketch...
+#
+# Builds sketch for target
+# Target can be: uno, due, d1
+#
+# Uses the Arduino command line interface
+#
+# https://github.com/arduino/Arduino/blob/master/build/shared/manpage.adoc
+
+set -e
+
+OPERATION=`basename $0`
+TARGET=$1; shift
+cp ~/.arduino15/preferences.txt-$TARGET ~/.arduino15/preferences.txt
+if [ -n "$PORT" ]
+then
+  echo "serial.port=$PORT" >> ~/.arduino15/preferences.txt
+fi
+
+for F in $*
+do
+  echo
+  echo ${F}:
+
+  rm -rf w
+  mkdir -p w
+
+  cp $F.ino w/
+  if [ "$TARGET" = "due" ]
+  then
+    sed -i '/EEPROM/d' w/$(basename $F).ino
+  fi
+  for A in converted-assets/$(basename $F)*_assets.h
+  do
+    [ -f $A ] && cp $A w/
+  done
+  cd w/
+
+  # --preserve-temp-files 
+  # -v
+  # --upload
+
+  $HOME/arduino-1.8.3/arduino --$OPERATION $(basename $F).ino
+  cd ..
+done

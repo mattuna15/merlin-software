@@ -1,0 +1,35 @@
+EXAMPLES=" \
+examples/blobs \
+examples/chess \
+examples/cobra \
+examples/cube \
+examples/cube2 \
+examples/fizz \
+examples/frogger \
+examples/helloworld \
+examples/jnr \
+examples/jpeg \
+examples/kenney \
+examples/logo \
+examples/mono \
+examples/nightstrike \
+examples/noisy \
+examples/radarchart \
+examples/reflection \
+examples/selftest \
+examples/simon \
+examples/sketch \
+examples/slotgag \
+examples/song \
+examples/sprites \
+examples/tiled \
+examples/tilt \
+examples/video1 \
+examples/video2 \
+examples/viewer \
+examples/walk \
+examples/widgets"
+
+scripts/verify uno $EXAMPLES
+scripts/verify d1 $EXAMPLES
+scripts/verify due $EXAMPLES

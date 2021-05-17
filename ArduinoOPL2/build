@@ -1,0 +1,146 @@
+#!/bin/sh
+
+if [ "$(id -u)" != "0" ]
+  then echo "Please run as root"
+  exit
+fi
+
+clear
+echo "\033[1;33m    ________ __________ ____    ________      "
+echo "\033[1;33m    \\_____  \\\\\______   \\    |   \\_____  \\     "
+echo "\033[1;32m     /   |   \\|     ___/    |    /  ____/     "
+echo "\033[1;36m    /    |    \\    |   |    |___/       \\     "
+echo "\033[1;34m    \\_______  /____|   |_______ \\_______ \\    "
+echo "\033[1;33m ____     __\033[1;34m\\/\033[1;33m_\033[1;34m                \\/       \\/    "
+echo "\033[1;33m|    |   |__\\_ |______________ _______ ___ __ "
+echo "\033[1;32m|    |   |  || __ \\_  __ \\__  \\\\\_  __ <   |  |"
+echo "\033[1;36m|    |___|  || \\_\\ \\  | \\// __ \\|  | \\/\\___  |"
+echo "\033[1;34m|_______ \\__||___  /__|  (____  /__|   / ____|"
+echo "\033[1;34m        \\/       \\/           \\/       \\/     \033[0m"
+echo "For the \033[1;36mOPL2 Audio Board\033[0m and \033[1;36mOPL3 Duo!\033[0m synthesizers"
+echo ""
+echo "Installation script for Raspberry Pi and compatibles"
+echo "Library version 2.1.0, 23rd of January 2020"
+echo "Copyright (c) 2016-2021 Maarten Janssen, Cheerful"
+echo ""
+
+MYDIR=$(pwd)
+
+echo -n "Checking for SPI devices... "
+if [ "$(ls /dev/*spi* 2>/dev/null)" != "" ]
+then
+        echo "\033[0;32mOk\033[0m"
+else
+        echo "\033[0;31mFailed\033[0m"
+        echo "\nNo SPI devices were found enabled on your Pi."
+        echo "Please run '\033[1;34msudo raspi-config\033[0m' and enable SPI from the 'Interfacing Options'"
+        echo "menu. If you are using a different board then please consult its documentation"
+        echo "on how to enable SPI on your board."
+        echo ""
+        exit
+fi
+
+echo -n "Checking for WiringPi... "
+if ! type "gpio" > /dev/null
+then
+        echo "\033[0;31mFailed\033[0m"
+        echo "\nWiringPi was not found."
+        echo -n "Do you want to download and install it now? "
+        read REPLY
+        REPLY=$(echo "$REPLY" | awk '{gsub(/ /, "", $0); print toupper(substr($0==""?"N":$0, 1, 1))}')
+
+        if [ $REPLY = "Y" ]
+        then
+                echo -n "Downloading and installing WiringPi... "
+                apt-get install -y wiringpi > /dev/null
+
+                # Check if WiringPi installed ok...
+                if ! type "gpio" > /dev/null; then
+                        echo "\033[0;31mFailed\033[0m"
+                        echo "WiringPi installation failed! Sorry mate, you're on your own."
+                        echo ""
+                        exit
+                fi
+                echo "\033[0;32mDone\033[0m"
+        else
+                echo "OPL2 Audio Board installation cannot continue without WiringPi."
+                echo ""
+                exit
+        fi
+else
+        echo "\033[0;32mOk\033[0m"
+fi
+
+echo -n "Building the OPL2 library... "
+sed -i 's/^\s*#define BOARD_TYPE.*/\t#define BOARD_TYPE OPL2_BOARD_TYPE_RASPBERRY_PI/' "$MYDIR"/src/OPL2.h
+
+g++ -std=c++11 -c -fPIC -o "$MYDIR"/OPL2.o "$MYDIR"/src/OPL2.cpp -lwiringPi
+g++ -shared -o "$MYDIR"/libOPL2.so "$MYDIR"/OPL2.o
+mv "$MYDIR"/libOPL2.so /usr/lib/
+cp "$MYDIR"/src/OPL2.h /usr/include/
+rm "$MYDIR"/OPL2.o
+
+g++ -std=c++11 -c -fPIC -o "$MYDIR"/OPL3.o "$MYDIR"/src/OPL3.cpp -lwiringPi
+g++ -shared -o "$MYDIR"/libOPL3.so "$MYDIR"/OPL3.o
+mv "$MYDIR"/libOPL3.so /usr/lib/
+cp "$MYDIR"/src/OPL3.h /usr/include/
+rm "$MYDIR"/OPL3.o
+
+g++ -std=c++11 -c -fPIC -o "$MYDIR"/OPL3Duo.o "$MYDIR"/src/OPL3Duo.cpp -lwiringPi
+g++ -shared -o "$MYDIR"/libOPL3Duo.so "$MYDIR"/OPL3Duo.o
+mv "$MYDIR"/libOPL3Duo.so /usr/lib/
+cp "$MYDIR"/src/OPL3Duo.h /usr/include/
+rm "$MYDIR"/OPL3Duo.o
+
+ldconfig
+echo "\033[0;32mDone\033[0m"
+
+echo -n "Compiling examples... "
+g++ -std=c++11 -Wall -o "$MYDIR"/examples_pi/demotune/demotune "$MYDIR"/examples_pi/demotune/demotune.cpp -lOPL2 -lwiringPi
+g++ -std=c++11 -Wall -o "$MYDIR"/examples_pi/drums/drums "$MYDIR"/examples_pi/drums/drums.cpp -lOPL2 -lwiringPi
+g++ -std=c++11 -Wall -o "$MYDIR"/examples_pi/simpletone/simpletone "$MYDIR"/examples_pi/simpletone/simpletone.cpp -lOPL2 -lwiringPi
+g++ -std=c++11 -Wall -o "$MYDIR"/examples_pi/opl2play/opl2play "$MYDIR"/examples_pi/opl2play/opl2play.cpp -lOPL2 -lwiringPi -lz
+g++ -std=c++11 -Wall -o "$MYDIR"/examples_pi/frequency_sweep/sweep "$MYDIR"/examples_pi/frequency_sweep/sweep.cpp -lOPL2 -lwiringPi -lz
+
+g++ -std=c++11 -Wall -o "$MYDIR"/examples_pi/OPL3Duo/HardwareTest/HardwareTest "$MYDIR"/examples_pi/OPL3Duo/HardwareTest/HardwareTest.cpp -lOPL3Duo -lOPL3 -lOPL2 -lwiringPi -lz
+g++ -std=c++11 -Wall -o "$MYDIR"/examples_pi/OPL3Duo/DemoTune/DemoTune "$MYDIR"/examples_pi/OPL3Duo/DemoTune/TuneParser.cpp "$MYDIR"/examples_pi/OPL3Duo/DemoTune/DemoTune.cpp -lOPL3Duo -lOPL3 -lOPL2 -lwiringPi -lz
+
+echo "\033[0;32mDone\033[0m"
+echo "Installation complete."
+
+echo ""
+echo "What board are you using?"
+echo "  \033[1;36m2\033[0m - OPL2 Audio Board"
+echo "  \033[1;36m3\033[0m - OPL3 Duo!"
+
+read REPLY
+if [ $REPLY = "2" ]
+then
+	"$MYDIR"/connecting
+
+	echo -n "Are you ready to try your OPL2 Audio Board? "
+	read REPLY
+	REPLY=$(echo "$REPLY" | awk '{gsub(/ /, "", $0); print toupper(substr($0==""?"N":$0, 1, 1))}')
+	if [ $REPLY = "Y" ]
+	then
+        echo "If all went successful you should hear music playing now!"
+        "$MYDIR"/examples_pi/demotune/demotune &
+	fi
+	echo ""
+elif [ $REPLY = "3" ]
+then
+    "$MYDIR"/connecting_opl3duo
+
+    echo -n "Are you ready to try your OPL3 Duo?"
+    read REPLY
+    REPLY=$(echo "$REPLY" | awk '{gsub(/ /, "", $0); print toupper(substr($0==""?"N":$0, 1, 1))}')
+    if [ $REPLY = "Y" ]
+    then
+        echo "If all went successful you should hear music playing now!"
+        "$MYDIR"/examples_pi/OPL3Duo/DemoTune/DemoTune &
+    fi
+    echo ""
+else
+	echo "Hmm... I don't know that one."
+	echo ""
+fi
