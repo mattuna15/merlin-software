@@ -3,6 +3,7 @@
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
+#include "term-font.h"
 
 // 160 character line buffer
 char terminal_linebuffer[] = "                                                                                                                                                                 ";
@@ -39,9 +40,9 @@ void GD2Terminal::set_size_fullscreen()
 {
   int character_width = 8;
   int character_height = 8;
-  if (current_font == TEXTVGA)
+  if (current_font != TEXT8X8)
   {
-    character_height = 16;
+    character_height = 256;
   }
   int row_count = floor(GD.h / character_height);
   int col_count = floor(GD.w / character_width);
@@ -109,6 +110,12 @@ void GD2Terminal::set_font_8x8()
 void GD2Terminal::set_font_vga()
 {
   current_font = TEXTVGA;
+  line_pixel_height = 16;
+}
+
+void GD2Terminal::set_font(int handle)
+{
+  current_font = handle;
   line_pixel_height = 16;
 }
 
@@ -334,6 +341,7 @@ void GD2Terminal::draw(int startx, int starty)
     GD.Vertex2ii(max_xoffset ? GD.random(max_xoffset) + draw_x_coord : draw_x_coord,
                  ycoord,
                  TERMINAL_BITMAP_HANDLE_TEXT);
+
     current_line_address = (current_line_address + (scrollback_length - 1)) % scrollback_length;
   }
 
@@ -359,132 +367,4 @@ void GD2Terminal::draw(int startx, int starty)
                TAG_SCROLLBAR);
 
   GD.RestoreContext();
-}
-
-extern volatile uint8_t *spi_ctl;
-
-void thostcmd(byte a)
-{
-  BIT_SET(*spi_ctl, GPU_CS);
-  SPI.transfer(a);
-  SPI.transfer(0x00);
-  SPI.transfer(0x00);
-  BIT_CLEAR(*spi_ctl, GPU_CS);
-}
-
-byte get_ident()
-{
-  return GD.rd(REG_ID);
-}
-
-int main()
-{
-
-  printf("\r\n\r\nHello world\r\n");
-
-  unsigned int r = 0;
-
-  //initial reset
-  thostcmd(0x42); // SLEEP
-  thostcmd(0x00);
-  thostcmd(0x68);
-  delay(1000);
-
-  while (r != 0x08)
-  {
-    SPI.setGPUOn();
-
-    SPI.transfer(0x0c);
-    SPI.transfer(0x00);
-    SPI.transfer(0x00);
-    for (int c = 0; c < 4; c++)
-    {
-      r = SPI.transfer(0);
-      printf("Result: %0X\r\n", r);
-      if (r == 0x08)
-        break;
-    }
-    SPI.setGPUOff();
-  }
-
-  GD.begin(0);
-
-  r = get_ident();
-
-  printf("Ident: %0x\r\n", r);
-
-  if (r != 0x7c)
-    exit(1);
-
-  uint16_t err = GD.rd16(REG_CMD_READ);
-  if (err == 0xfff) {
-    printf("\r\nAlert %0x\r\n", err);
-    exit(1);
-  }
-
-  // GD.seed(0x7563);
-  // uint16_t rnd = GD.random(100);
-  // printf("\r\nRandom %0d\r\n", rnd);
-
-  // GD.wr16(REG_HSIZE, 1280);
-  // GD.wr16(REG_VSIZE, 720);
-
-  // w = GD.rd16(REG_HSIZE);
-  // h = GD.rd16(REG_VSIZE);
-
-  // printf("New Height: %0d, width: %0d\r\n", h, w);
-
-  // GD.cmd_regwrite(REG_OUTBITS, 0666);
-  // GD.cmd_regwrite(REG_DITHER, 1);
-  // GD.cmd_regwrite(REG_ROTATE, 1);
-  // GD.cmd_regwrite(REG_SWIZZLE, 3);
-  //   GD.cmd_regwrite(REG_PCLK_POL, 1);
-
-  //GD.wr32(REG_FREQUENCY, 0x3938700);
-
-  // GD.wr16(REG_HSIZE, 1280);
-  // GD.wr16(REG_VSIZE, 720);
-  // GD.wr16(REG_OUTBITS, 0);
-  // GD.wr16(REG_VCYCLE, 750);
-  // GD.wr16(REG_HCYCLE, 1650);
-  // GD.wr16(REG_VSYNC0, 5);
-  // GD.wr16(REG_HSYNC0, 40);
-  // GD.wr16(REG_VSYNC1, 0);
-  // GD.wr16(REG_HSYNC1, 0);
-  // GD.wr16(REG_VOFFSET, 25);
-  // GD.wr16(REG_HOFFSET, 260);
-  // GD.wr16(REG_PCLK, 1);
-  // GD.wr16(REG_PCLK_POL, 0);
-  // GD.wr16(REG_OUTBITS, 0),
-  // GD.wr16(REG_DITHER, 0),
-  // GD.wr(REG_GPIO, 0x83),
-  // GD.wr(REG_CSPREAD, 0),
-  // GD.wr(REG_SWIZZLE, 0);
-  // GD.wr(REG_ADAPTIVE_FRAMERATE, 0),
-
-  GD.w = GD.rd16(REG_HSIZE);
-  GD.h = GD.rd16(REG_VSIZE);
-
-  printf("New Height: %0d, width: %0d\r\n", GD.h, GD.w);
-  printf("Frequency: %lu\r\n", GD.rd32(REG_FREQUENCY));
-  printf("Outbits: %0d\r\n", GD.rd16(REG_OUTBITS));
-  printf("VCYCLE: %0d\r\n", GD.rd16(REG_VCYCLE));
-  printf("HCYCLE: %0d\r\n", GD.rd16(REG_HCYCLE));
-  printf("Vsync: %0d\r\n", GD.rd16(REG_VSYNC0));
-  printf("hsync: %0d\r\n", GD.rd16(REG_HSYNC0));
-  printf("Voffset: %0d\r\n", GD.rd16(REG_VOFFSET));
-  printf("Hoffset: %0d\r\n", GD.rd16(REG_HOFFSET));
-  printf("P clk pol: %0d\r\n", GD.rd16(REG_PCLK_POL));
-  printf("p clk: %0d\r\n", GD.rd16(REG_PCLK));
-
-  delay(1000);
-
-  GD.ClearColorRGB(0x008080);
-  GD.Clear();
-  GD.cmd_text(GD.w / 2, GD.h / 2, 31, OPT_CENTER, "Hello world");
-  GD.swap();
-
-  printf("\r\nend\r\n");
-
-  exit(0);
 }

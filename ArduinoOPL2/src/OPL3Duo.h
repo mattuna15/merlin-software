@@ -8,7 +8,7 @@
 	#define OPL3DUO_NUM_4OP_CHANNELS 12
 
 	#if BOARD_TYPE == OPL2_BOARD_TYPE_ARDUINO
-		#define PIN_UNIT 6
+		#define PIN_UNIT A2
 	#else
 		#define PIN_UNIT 6				// GPIO header pin 22
 	#endif

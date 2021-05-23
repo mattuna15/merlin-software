@@ -27,14 +27,6 @@
 
 #include "OPL3Duo.h"
 
-// TODO: Change BOARD_TYPE to PLATFORM
-#if BOARD_TYPE == OPL2_BOARD_TYPE_ARDUINO
-	#include <SPI.h>
-	#include <Arduino.h>
-#else
-	#include <wiringPi.h>
-	#include <wiringPiSPI.h>
-#endif
 
 
 /**
@@ -68,7 +60,7 @@ OPL3Duo::OPL3Duo(byte a2, byte a1, byte a0, byte latch, byte reset) : OPL3(a1, a
  * Initialize the OPL3Duo and reset the chips.
  */
 void OPL3Duo::begin() {
-	pinMode(pinUnit, OUTPUT);
+	//pinMode(pinUnit, OUTPUT);
 	digitalWrite(pinUnit, LOW);
 	OPL3::begin();
 }

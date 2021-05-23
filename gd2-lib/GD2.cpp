@@ -587,14 +587,14 @@ begin1:
     cmd_flashfast(fr);
     finish();
     uint32_t res = rd32(fr);
-    printf("Flash: %0ld \r\n", res);
+    //printf("Flash: %0ld \r\n", res);
     if (res == 0) {
       uint32_t a = 0xff000UL;
       cmd_flashread(a, 0x1000, 0x1000);
       GD.finish();
 
       res = rd32(a + 0xffc);
-      printf("Flash: %0ld \r\n", res);
+      //printf("Flash: %0ld \r\n", res);
       if (res == 0x7C6A0100UL) {
         for (int i = 0; i < 128; i++)
           cI(rd32(a + 4 * i));
@@ -862,7 +862,7 @@ void GDClass::cs(const char *s) {
 void GDClass::copy(const uint8_t *src, int count) {
   byte a = count & 3;
   while (count--) {
-    GDTR.cmdbyte(*src++);
+    GDTR.cmdbyte(*src);
     src++;
   }
   align(a);
@@ -1058,16 +1058,20 @@ void GDClass::Vertex2f(int16_t x, int16_t y) {
   cI((1UL << 30) | ((x & 32767L) << 15) | ((y & 32767L) << 0));
 }
 void GDClass::Vertex2ii(uint16_t x, uint16_t y, byte handle, byte cell) {
-  // cI((2UL << 30) | ((x & 511L) << 21) | ((y & 511L) << 12) | ((handle & 31L) << 7) | ((cell & 127L) << 0));
-  union {
-    uint32_t c;
-    uint8_t b[4];
-  };
-  b[3] = (cell & 127) | ((handle & 1) << 7);
-  b[2] = (handle >> 1) | (y << 4);
-  b[1] = (y >> 4) | (x << 5);
-  b[0] = (2 << 6) | (x >> 3);
-  cI(c);
+  
+  
+  cI((2UL << 30) | ((x & 511L) << 21) | ((y & 511L) << 12) | ((handle & 31L) << 7) | ((cell & 127L) << 0));
+  //VERTEX2II(x,y,handle,cell) ((2UL<<30)|(((x)&511UL)<<21)|(((y)&511UL)<<12)|(((handle)&31UL)<<7)|(((cell)&127UL)<<0))
+  
+  // union {
+  //   uint32_t c;
+  //   uint8_t b[4];
+  // };
+  // b[3] = (cell & 127) | ((handle & 1) << 7);
+  // b[2] = (handle >> 1) | (y << 4);
+  // b[1] = (y >> 4) | (x << 5);
+  // b[0] = (2 << 6) | (x >> 3);
+  // cI(c);
 }
 void GDClass::VertexFormat(byte frac) {
   cI((39UL << 24) | (((frac) & 7) << 0));

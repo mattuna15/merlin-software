@@ -1,6 +1,12 @@
 #include "TuneParser.h"
+#include <math.h>
 
+uint32_t volatile *timer = (uint32_t volatile *)0xf30030;
 
+uint32_t millis(void) {
+
+	return *timer;
+}
 /**
  * TuneParser constructor.
  *
@@ -204,7 +210,7 @@ Tune TuneParser::playBackground(const char* voice0, const char* voice1, const ch
 Tune TuneParser::createTune(const char* voices[6], int numVoices) {
 	Tune tune;
 
-	tune.numVoices = min(numVoices, 6);
+	tune.numVoices = fmin(numVoices, 6);
 	for (byte i = 0; i < tune.numVoices; i ++) {
 		tune.voice[i].pattern = voices[i];
 	}
@@ -213,7 +219,6 @@ Tune TuneParser::createTune(const char* voices[6], int numVoices) {
 
 	return tune;
 }
-
 
 /**
  * Restart the given background tune.
@@ -319,7 +324,7 @@ bool TuneParser::parseTuneCommand(Tune& tune, byte voiceIndex) {
 	Voice& voice = tune.voice[voiceIndex];
 
 	// Get command character and convert to upper case.
-	char command = pgm_read_byte_near(voice.pattern + voice.position);
+	char command = voice.pattern[voice.position];
 	if (command >= 'a') {
 		command -= 32;
 	}
@@ -420,7 +425,7 @@ bool TuneParser::parseTuneCommand(Tune& tune, byte voiceIndex) {
  * @param voice - The voice from which to extract the note.
  */
 void TuneParser::parseNote(Voice& voice) {
-	byte noteIndex = pgm_read_byte_near(voice.pattern + voice.position);
+	byte noteIndex = voice.pattern[voice.position];
 	if (noteIndex >= 'a' && noteIndex <= 'g') {
 		noteIndex = noteIndex - 'a';
 	} else if (noteIndex >= 'A' && noteIndex <= 'G') {
@@ -433,18 +438,18 @@ void TuneParser::parseNote(Voice& voice) {
 	byte note = notes[0][noteIndex];
 
 	// Handle sharp and flat notes.
-	char sharpFlat = pgm_read_byte_near(voice.pattern + voice.position + 1);
+	char sharpFlat = voice.pattern[voice.position + 1];
 	if (sharpFlat == TUNE_CMD_NOTE_FLAT) {
 		voice.position ++;
 		note = notes[1][noteIndex];
 		if (note == NOTE_B) {
-			octave = max(octave - 1, 0);
+			octave = fmax(octave - 1, 0);
 		}
 	} else if (sharpFlat == TUNE_CMD_NOTE_SHARP || sharpFlat == TUNE_CMD_NOTE_SHARP2) {
 		voice.position ++;
 		note = notes[2][noteIndex];
 		if (note == NOTE_C) {
-			octave = min(octave + 1, 7);
+			octave = fmin(octave + 1, 7);
 		}
 	}
 
@@ -478,11 +483,11 @@ void TuneParser::parseRest(Voice& voice) {
 	char digit;
 	do {
 		voice.position ++;
-		digit = pgm_read_byte_near(voice.pattern + voice.position);
+		digit = voice.pattern[voice.position];
 	} while (digit >= '0' && digit <= '9');
 
 	// If note has a dot then add half of its duration.
-	if (pgm_read_byte_near(voice.pattern + voice.position) == TUNE_CMD_NOTE_DOUBLE) {
+	if (voice.pattern[voice.position] == TUNE_CMD_NOTE_DOUBLE) {
 		ticks += ticks / 2;
 	}
 
@@ -530,7 +535,7 @@ byte TuneParser::parseNoteLength(Voice voice) {
  * @return The number at the current command position in the voice or TP_NAN.
  */
 byte TuneParser::parseNumber(Voice voice, int nMin, int nMax) {
-	char nextDigit = pgm_read_byte_near(voice.pattern + voice.position + 1);
+	char nextDigit = voice.pattern[voice.position + 1];
 	if (nextDigit < '0' || nextDigit > '9') {
 		return TP_NAN;
 	}
@@ -539,9 +544,9 @@ byte TuneParser::parseNumber(Voice voice, int nMin, int nMax) {
 	while(nextDigit >= '0' && nextDigit <= '9') {
 		number *= 10;
 		voice.position ++;
-		number = number + pgm_read_byte_near(voice.pattern + voice.position) - '0';
-		nextDigit = pgm_read_byte_near(voice.pattern + voice.position + 1);
+		number = number + voice.pattern[voice.position] - '0';
+		nextDigit = voice.pattern[voice.position + 1];
 	}
 
-	return (byte)max(nMin, min(number, nMax));
+	return (byte)fmax(nMin, fmin(number, nMax));
 }

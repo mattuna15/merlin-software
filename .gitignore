@@ -54,3 +54,4 @@ dkms.conf
 *.run
 *.lst
 *.bin
+*.lock

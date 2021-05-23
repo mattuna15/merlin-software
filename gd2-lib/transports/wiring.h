@@ -112,8 +112,8 @@ public:
     };
 
     c = x;
-    printf("cmd32: %0lX, freespace: %0d, wp: %0d\r\n", c, freespace, wp);
-    printf("%X %X %X %X\r\n", b[3], b[2], b[1], b[0]);
+    //printf("cmd32: %0lX, freespace: %0d, wp: %0d\r\n", c, freespace, wp);
+    //printf("%X %X %X %X\r\n", b[3], b[2], b[1], b[0]);
     SPI.transfer(b[3]);
     SPI.transfer(b[2]);
     SPI.transfer(b[1]);

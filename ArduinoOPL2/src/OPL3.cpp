@@ -27,14 +27,6 @@
 
 #include "OPL3.h"
 
-#if BOARD_TYPE == OPL2_BOARD_TYPE_ARDUINO
-	#include <SPI.h>
-	#include <Arduino.h>
-#else
-	#include <wiringPi.h>
-	#include <wiringPiSPI.h>
-#endif
-
 
 /**
  * Create a new OPL3 instance with default pins.
@@ -65,7 +57,7 @@ OPL3::OPL3(byte a1, byte a0, byte latch, byte reset) : OPL2(reset, a0, latch) {
  * Initialize the OPL3 library and reset the chip.
  */
 void OPL3::begin() {
-	pinMode(pinBank, OUTPUT);
+	//pinMode(pinBank, OUTPUT);
 	digitalWrite(pinBank, LOW);
 	OPL2::begin();
 }

@@ -113,6 +113,7 @@ public:
   void reset();
   void set_font_8x8();
   void set_font_vga();
+  void set_font(int handle);
   uint32_t bitmap_byte_size();
   uint32_t ram_end_address();
   void change_size(uint16_t rows, uint16_t columns);

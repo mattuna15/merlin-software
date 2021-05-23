@@ -16,9 +16,9 @@
 		#undef PIN_ADDR					// Undefine A0 and /IC pins from OPL2 and redefine for OPL3 Duo.
 		#undef PIN_RESET
 
-		#define PIN_BANK  7
-		#define PIN_ADDR  8
-		#define PIN_RESET 9
+		#define PIN_BANK  A1
+		#define PIN_ADDR  A0
+		#define PIN_RESET IC
 	#else
 		#define PIN_BANK 5				// GPIO header pin 18
 	#endif

@@ -103,7 +103,7 @@ public:
   byte transfer(byte x ) {
     byte r = 0;
 
-    printf("s:%0X ", x);
+   // printf("s:%0X ", x);
 
     while (!BIT_CHECK(*spi_ctl, READY)) {}
 
@@ -115,7 +115,7 @@ public:
     while (!BIT_CHECK(*spi_ctl, READY)) {}
 
     r = *spi_data_out;
-    printf("r:%0X\r\n", r);
+   // printf("r:%0X\r\n", r);
 
     return r;
   }
