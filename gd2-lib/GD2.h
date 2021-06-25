@@ -9,44 +9,41 @@
 
 #define GD2_VERSION "%VERSION"
 
-
 #include <stdarg.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <algorithm>
+#include "../FatFs/ff.h"
 
-#define RGB(r, g, b)    ((uint32_t)((((r) & 0xffL) << 16) | (((g) & 0xffL) << 8) | ((b) & 0xffL)))
-#define F8(x)           (int((x) * 256L))
-#define F16(x)          ((int32_t)((x) * 65536L))
+#define RGB(r, g, b) ((uint32_t)((((r)&0xffL) << 16) | (((g)&0xffL) << 8) | ((b)&0xffL)))
+#define F8(x) (int((x)*256L))
+#define F16(x) ((int32_t)((x)*65536L))
 
-                            // Options for GD.begin():
-#define GD_CALIBRATE    1   // enable touchscreen calibration at startup
-#define GD_TRIM         2   // trim the built-in oscillator
-#define GD_STORAGE      4   // initialize attached microSD
+// Options for GD.begin():
+#define GD_CALIBRATE 1 // enable touchscreen calibration at startup
+#define GD_TRIM 2      // trim the built-in oscillator
+#define GD_STORAGE 4   // initialize attached microSD
 
-
-#define BOARD_FTDI_80x    0
+#define BOARD_FTDI_80x 0
 #define BOARD_GAMEDUINO23 1
-#define BOARD_SUNFLOWER   2
-#define BOARD_OTHER       3
+#define BOARD_SUNFLOWER 2
+#define BOARD_OTHER 3
 
 #ifndef BOARD
-#define BOARD         BOARD_GAMEDUINO23 // board, from above
+#define BOARD BOARD_GAMEDUINO23 // board, from above
 #endif
 
-#define STORAGE       0                 // Want SD storage?
-#define CALIBRATION   0                 // Want touchscreen calibration?
+#define STORAGE 1     // Want SD storage?
+#define CALIBRATION 0 // Want touchscreen calibration?
 
 #define byte uint8_t
 
-
-
 /* a=target variable, b=bit number to act upon 0-n */
-#define BIT_SET(a,b) ((a) |= (1ULL<<(b)))
-#define BIT_CLEAR(a,b) ((a) &= ~(1ULL<<(b)))
-#define BIT_FLIP(a,b) ((a) ^= (1ULL<<(b)))
-#define BIT_CHECK(a,b) (!!((a) & (1ULL<<(b))))        // '!!' to make sure this returns 0 or 1
+#define BIT_SET(a, b) ((a) |= (1ULL << (b)))
+#define BIT_CLEAR(a, b) ((a) &= ~(1ULL << (b)))
+#define BIT_FLIP(a, b) ((a) ^= (1ULL << (b)))
+#define BIT_CHECK(a, b) (!!((a) & (1ULL << (b)))) // '!!' to make sure this returns 0 or 1
 
 #define GPU_CS 0
 #define SD_CS 1
@@ -54,73 +51,81 @@
 #define VALID_OUT 3
 #define READY 5
 
-
-
-
-class ASPI_t {  
+class ASPI_t
+{
 
   uint8_t volatile *spi_ctl = (uint8_t volatile *)0xf40009;
-uint8_t volatile *spi_data_in = (uint8_t volatile *)0xf4000b;
-uint8_t volatile *spi_data_out = (uint8_t volatile *)0xf4000d;
-
+  uint8_t volatile *spi_data_in = (uint8_t volatile *)0xf4000b;
+  uint8_t volatile *spi_data_out = (uint8_t volatile *)0xf4000d;
 
 public:
-  void begin(void) {
+  void begin(void)
+  {
 
     BIT_CLEAR(*spi_ctl, GPU_CS);
     BIT_CLEAR(*spi_ctl, SD_CS);
     BIT_CLEAR(*spi_ctl, DAZ_CS);
-
   }
 
-  void setDazOn() {
+  void setDazOn()
+  {
 
     BIT_SET(*spi_ctl, DAZ_CS);
   }
-  void setDazOff() {
+  void setDazOff()
+  {
 
     BIT_CLEAR(*spi_ctl, DAZ_CS);
-
   }
 
-  void setGPUOn() {
+  void setGPUOn()
+  {
 
     BIT_SET(*spi_ctl, GPU_CS);
   }
-  void setGPUOff() {
+  void setGPUOff()
+  {
 
     BIT_CLEAR(*spi_ctl, GPU_CS);
-
   }
 
-  void delay(int ms) {
+  void delay(int ms)
+  {
 
-    for (int i=0; i<ms; i++) {
-     asm("nop");
+    for (int i = 0; i < ms; i++)
+    {
+      asm("nop");
     }
   }
 
-  byte transfer(byte x ) {
+  byte transfer(byte x)
+  {
     byte r = 0;
 
-   // printf("s:%0X ", x);
+    // printf("s:%0X ", x);
 
-    while (!BIT_CHECK(*spi_ctl, READY)) {}
+    while (!BIT_CHECK(*spi_ctl, READY))
+    {
+    }
 
     *spi_data_in = x;
 
     BIT_SET(*spi_ctl, VALID_OUT);
     BIT_CLEAR(*spi_ctl, VALID_OUT);
 
-    while (!BIT_CHECK(*spi_ctl, READY)) {}
+    while (!BIT_CHECK(*spi_ctl, READY))
+    {
+    }
 
     r = *spi_data_out;
-   // printf("r:%0X\r\n", r);
+    // printf("r:%0X\r\n", r);
 
     return r;
   }
-  void transfer(byte*m, int s) {
-    while (s--) {
+  void transfer(byte *m, int s)
+  {
+    while (s--)
+    {
       *m = transfer(*m);
       m++;
     }
@@ -129,16 +134,16 @@ public:
 static class ASPI_t ASPI;
 #define SPI ASPI
 
-
-class sdcard {
+class sdcard
+{
 public:
-  void begin(int p) {};
+  void begin(int p){};
 };
-
 
 ////////////////////////////////////////////////////////////////////////
 
-class xy {
+class xy
+{
 public:
   int x, y;
   void set(int _x, int _y);
@@ -155,14 +160,15 @@ public:
   int nearer_than(int distance, xy &other);
 };
 
-class Bitmap {
+class Bitmap
+{
 public:
   xy size, center;
   uint32_t source;
   uint16_t format;
   int8_t handle;
 
-  void fromtext(int font, const char* s);
+  void fromtext(int font, const char *s);
   void fromfile(const char *filename, int format = 7);
 
   void bind(uint8_t handle);
@@ -180,23 +186,25 @@ class Bitmap __fromatlas(uint32_t addr);
 
 ////////////////////////////////////////////////////////////////////////
 
-enum Primitive {
-BITMAPS              = 1,
-POINTS               = 2,
-LINES                = 3,
-LINE_STRIP           = 4,
-EDGE_STRIP_R         = 5,
-EDGE_STRIP_L         = 6,
-EDGE_STRIP_A         = 7,
-EDGE_STRIP_B         = 8,
-RECTS                = 9,
+enum Primitive
+{
+  BITMAPS = 1,
+  POINTS = 2,
+  LINES = 3,
+  LINE_STRIP = 4,
+  EDGE_STRIP_R = 5,
+  EDGE_STRIP_L = 6,
+  EDGE_STRIP_A = 7,
+  EDGE_STRIP_B = 8,
+  RECTS = 9,
 };
 
-class GDClass {
+class GDClass
+{
 public:
   int w, h;
   uint32_t loadptr;
-  byte vxf;   // Vertex Format
+  byte vxf; // Vertex Format
 
   void begin(uint8_t options = (GD_CALIBRATE | GD_TRIM | GD_STORAGE), int cs = 0, int sdcs = 0);
 
@@ -223,12 +231,14 @@ public:
 
   void get_inputs(void);
   void get_accel(int &x, int &y, int &z);
-  struct _wii {
-      byte active;
-      xy l, r;
-      uint16_t buttons;
+  struct _wii
+  {
+    byte active;
+    xy l, r;
+    uint16_t buttons;
   };
-  struct {
+  struct
+  {
     uint16_t track_tag;
     uint16_t track_val;
     uint16_t rz;
@@ -318,7 +328,7 @@ public:
   void cmd_gradient(int16_t x0, int16_t y0, uint32_t rgb0, int16_t x1, int16_t y1, uint32_t rgb1);
   void cmd_inflate(uint32_t ptr);
   void cmd_interrupt(uint32_t ms);
-  void cmd_keys(int16_t x, int16_t y, int16_t w, int16_t h, byte font, uint16_t options, const char*s);
+  void cmd_keys(int16_t x, int16_t y, int16_t w, int16_t h, byte font, uint16_t options, const char *s);
   void cmd_loadidentity(void);
   void cmd_loadimage(uint32_t ptr, int32_t options);
   void cmd_memcpy(uint32_t dest, uint32_t src, uint32_t num);
@@ -410,341 +420,410 @@ private:
   uint32_t measure_freq(void);
 
   uint32_t rseed;
-  byte cprim;       // current primitive
+  byte cprim; // current primitive
 };
 
 extern GDClass GD;
 extern byte ft8xx_model;
 
-
-typedef struct {
+typedef struct
+{
   byte handle;
   uint16_t w, h;
   uint16_t size;
 } shape_t;
 
-
-void delay(int ms) ;
+void delay(int ms);
 // convert integer pixels to subpixels
-#define PIXELS(x)  int((x) * 16)
+#define PIXELS(x) int((x)*16)
 
 // Convert degrees to Furmans
 #define DEGREES(n) ((65536L * (n)) / 360)
 
-#define NEVER                0
-#define LESS                 1
-#define LEQUAL               2
-#define GREATER              3
-#define GEQUAL               4
-#define EQUAL                5
-#define NOTEQUAL             6
-#define ALWAYS               7
+#define NEVER 0
+#define LESS 1
+#define LEQUAL 2
+#define GREATER 3
+#define GEQUAL 4
+#define EQUAL 5
+#define NOTEQUAL 6
+#define ALWAYS 7
 
-#define ARGB1555             0
-#define L1                   1
-#define L4                   2
-#define L8                   3
-#define RGB332               4
-#define ARGB2                5
-#define ARGB4                6
-#define RGB565               7
-#define PALETTED             8
-#define TEXT8X8              9
-#define TEXTVGA              10
-#define BARGRAPH             11
-#define PALETTED565          14
-#define PALETTED4444         15
-#define PALETTED8            16
-#define L2                   17
-#define GLFORMAT             31
+#define ARGB1555 0
+#define L1 1
+#define L4 2
+#define L8 3
+#define RGB332 4
+#define ARGB2 5
+#define ARGB4 6
+#define RGB565 7
+#define PALETTED 8
+#define TEXT8X8 9
+#define TEXTVGA 10
+#define BARGRAPH 11
+#define PALETTED565 14
+#define PALETTED4444 15
+#define PALETTED8 16
+#define L2 17
+#define GLFORMAT 31
 
-#define NEAREST              0
-#define BILINEAR             1
+#define NEAREST 0
+#define BILINEAR 1
 
-#define BORDER               0
-#define REPEAT               1
+#define BORDER 0
+#define REPEAT 1
 
-#define KEEP                 1
-#define REPLACE              2
-#define INCR                 3
-#define DECR                 4
-#define INVERT               5
+#define KEEP 1
+#define REPLACE 2
+#define INCR 3
+#define DECR 4
+#define INVERT 5
 
-#define DLSWAP_DONE          0
-#define DLSWAP_LINE          1
-#define DLSWAP_FRAME         2
+#define DLSWAP_DONE 0
+#define DLSWAP_LINE 1
+#define DLSWAP_FRAME 2
 
-#define INT_SWAP             1
-#define INT_TOUCH            2
-#define INT_TAG              4
-#define INT_SOUND            8
-#define INT_PLAYBACK         16
-#define INT_CMDEMPTY         32
-#define INT_CMDFLAG          64
-#define INT_CONVCOMPLETE     128
+#define INT_SWAP 1
+#define INT_TOUCH 2
+#define INT_TAG 4
+#define INT_SOUND 8
+#define INT_PLAYBACK 16
+#define INT_CMDEMPTY 32
+#define INT_CMDFLAG 64
+#define INT_CONVCOMPLETE 128
 
-#define TOUCHMODE_OFF        0
-#define TOUCHMODE_ONESHOT    1
-#define TOUCHMODE_FRAME      2
+#define TOUCHMODE_OFF 0
+#define TOUCHMODE_ONESHOT 1
+#define TOUCHMODE_FRAME 2
 #define TOUCHMODE_CONTINUOUS 3
 
-#define ZERO                 0
-#define ONE                  1
-#define SRC_ALPHA            2
-#define DST_ALPHA            3
-#define ONE_MINUS_SRC_ALPHA  4
-#define ONE_MINUS_DST_ALPHA  5
+#define ZERO 0
+#define ONE 1
+#define SRC_ALPHA 2
+#define DST_ALPHA 3
+#define ONE_MINUS_SRC_ALPHA 4
+#define ONE_MINUS_DST_ALPHA 5
 
-#define OPT_MONO             1
-#define OPT_NODL             2
-#define OPT_FLAT             256
-#define OPT_CENTERX          512
-#define OPT_CENTERY          1024
-#define OPT_CENTER           (OPT_CENTERX | OPT_CENTERY)
-#define OPT_NOBACK           4096
-#define OPT_NOTICKS          8192
-#define OPT_NOHM             16384
-#define OPT_NOPOINTER        16384
-#define OPT_NOSECS           32768
-#define OPT_NOHANDS          49152
-#define OPT_RIGHTX           2048
-#define OPT_SIGNED           256
-#define OPT_SOUND            32
+#define OPT_MONO 1
+#define OPT_NODL 2
+#define OPT_FLAT 256
+#define OPT_CENTERX 512
+#define OPT_CENTERY 1024
+#define OPT_CENTER (OPT_CENTERX | OPT_CENTERY)
+#define OPT_NOBACK 4096
+#define OPT_NOTICKS 8192
+#define OPT_NOHM 16384
+#define OPT_NOPOINTER 16384
+#define OPT_NOSECS 32768
+#define OPT_NOHANDS 49152
+#define OPT_RIGHTX 2048
+#define OPT_SIGNED 256
+#define OPT_SOUND 32
 
-#define OPT_NOTEAR           4
-#define OPT_FULLSCREEN       8
-#define OPT_MEDIAFIFO        16
+#define OPT_NOTEAR 4
+#define OPT_FULLSCREEN 8
+#define OPT_MEDIAFIFO 16
 
-#define LINEAR_SAMPLES       0
-#define ULAW_SAMPLES         1
-#define ADPCM_SAMPLES        2
+#define LINEAR_SAMPLES 0
+#define ULAW_SAMPLES 1
+#define ADPCM_SAMPLES 2
 
 // 'instrument' argument to GD.play()
 
-#define SILENCE              0x00
+#define SILENCE 0x00
 
-#define SQUAREWAVE           0x01
-#define SINEWAVE             0x02
-#define SAWTOOTH             0x03
-#define TRIANGLE             0x04
+#define SQUAREWAVE 0x01
+#define SINEWAVE 0x02
+#define SAWTOOTH 0x03
+#define TRIANGLE 0x04
 
-#define BEEPING              0x05
-#define ALARM                0x06
-#define WARBLE               0x07
-#define CAROUSEL             0x08
+#define BEEPING 0x05
+#define ALARM 0x06
+#define WARBLE 0x07
+#define CAROUSEL 0x08
 
-#define PIPS(n)              (0x0f + (n))
+#define PIPS(n) (0x0f + (n))
 
-#define HARP                 0x40
-#define XYLOPHONE            0x41
-#define TUBA                 0x42
-#define GLOCKENSPIEL         0x43
-#define ORGAN                0x44
-#define TRUMPET              0x45
-#define PIANO                0x46
-#define CHIMES               0x47
-#define MUSICBOX             0x48
-#define BELL                 0x49
+#define HARP 0x40
+#define XYLOPHONE 0x41
+#define TUBA 0x42
+#define GLOCKENSPIEL 0x43
+#define ORGAN 0x44
+#define TRUMPET 0x45
+#define PIANO 0x46
+#define CHIMES 0x47
+#define MUSICBOX 0x48
+#define BELL 0x49
 
-#define CLICK                0x50
-#define SWITCH               0x51
-#define COWBELL              0x52
-#define NOTCH                0x53
-#define HIHAT                0x54
-#define KICKDRUM             0x55
-#define POP                  0x56
-#define CLACK                0x57
-#define CHACK                0x58
+#define CLICK 0x50
+#define SWITCH 0x51
+#define COWBELL 0x52
+#define NOTCH 0x53
+#define HIHAT 0x54
+#define KICKDRUM 0x55
+#define POP 0x56
+#define CLACK 0x57
+#define CHACK 0x58
 
-#define MUTE                 0x60
-#define UNMUTE               0x61
+#define MUTE 0x60
+#define UNMUTE 0x61
 
-#define RAM_PAL              1056768UL
+#define RAM_PAL 1056768UL
 
-#define RAM_CMD               (ft8xx_model ? 0x308000UL : 0x108000UL)
-#define RAM_DL                (ft8xx_model ? 0x300000UL : 0x100000UL)
-#define REG_CLOCK             (ft8xx_model ? 0x302008UL : 0x102408UL)
-#define REG_CMD_DL            (ft8xx_model ? 0x302100UL : 0x1024ecUL)
-#define REG_CMD_READ          (ft8xx_model ? 0x3020f8UL : 0x1024e4UL)
-#define REG_CMD_WRITE         (ft8xx_model ? 0x3020fcUL : 0x1024e8UL)
-#define REG_CPURESET          (ft8xx_model ? 0x302020UL : 0x10241cUL)
-#define REG_CSPREAD           (ft8xx_model ? 0x302068UL : 0x102464UL)
-#define REG_DITHER            (ft8xx_model ? 0x302060UL : 0x10245cUL)
-#define REG_DLSWAP            (ft8xx_model ? 0x302054UL : 0x102450UL)
-#define REG_FRAMES            (ft8xx_model ? 0x302004UL : 0x102404UL)
-#define REG_FREQUENCY         (ft8xx_model ? 0x30200cUL : 0x10240cUL)
-#define REG_GPIO              (ft8xx_model ? 0x302094UL : 0x102490UL)
-#define REG_GPIO_DIR          (ft8xx_model ? 0x302090UL : 0x10248cUL)
-#define REG_HCYCLE            (ft8xx_model ? 0x30202cUL : 0x102428UL)
-#define REG_HOFFSET           (ft8xx_model ? 0x302030UL : 0x10242cUL)
-#define REG_HSIZE             (ft8xx_model ? 0x302034UL : 0x102430UL)
-#define REG_HSYNC0            (ft8xx_model ? 0x302038UL : 0x102434UL)
-#define REG_HSYNC1            (ft8xx_model ? 0x30203cUL : 0x102438UL)
-#define REG_ID                (ft8xx_model ? 0x302000UL : 0x102400UL)
-#define REG_INT_EN            (ft8xx_model ? 0x3020acUL : 0x10249cUL)
-#define REG_INT_FLAGS         (ft8xx_model ? 0x3020a8UL : 0x102498UL)
-#define REG_INT_MASK          (ft8xx_model ? 0x3020b0UL : 0x1024a0UL)
-#define REG_MACRO_0           (ft8xx_model ? 0x3020d8UL : 0x1024c8UL)
-#define REG_MACRO_1           (ft8xx_model ? 0x3020dcUL : 0x1024ccUL)
-#define REG_OUTBITS           (ft8xx_model ? 0x30205cUL : 0x102458UL)
-#define REG_PCLK              (ft8xx_model ? 0x302070UL : 0x10246cUL)
-#define REG_PCLK_POL          (ft8xx_model ? 0x30206cUL : 0x102468UL)
-#define REG_PLAY              (ft8xx_model ? 0x30208cUL : 0x102488UL)
-#define REG_PLAYBACK_FORMAT   (ft8xx_model ? 0x3020c4UL : 0x1024b4UL)
-#define REG_PLAYBACK_FREQ     (ft8xx_model ? 0x3020c0UL : 0x1024b0UL)
-#define REG_PLAYBACK_LENGTH   (ft8xx_model ? 0x3020b8UL : 0x1024a8UL)
-#define REG_PLAYBACK_LOOP     (ft8xx_model ? 0x3020c8UL : 0x1024b8UL)
-#define REG_PLAYBACK_PLAY     (ft8xx_model ? 0x3020ccUL : 0x1024bcUL)
-#define REG_PLAYBACK_READPTR  (ft8xx_model ? 0x3020bcUL : 0x1024acUL)
-#define REG_PLAYBACK_START    (ft8xx_model ? 0x3020b4UL : 0x1024a4UL)
-#define REG_PWM_DUTY          (ft8xx_model ? 0x3020d4UL : 0x1024c4UL)
-#define REG_PWM_HZ            (ft8xx_model ? 0x3020d0UL : 0x1024c0UL)
-#define REG_ROTATE            (ft8xx_model ? 0x302058UL : 0x102454UL)
-#define REG_SOUND             (ft8xx_model ? 0x302088UL : 0x102484UL)
-#define REG_SWIZZLE           (ft8xx_model ? 0x302064UL : 0x102460UL)
-#define REG_TAG               (ft8xx_model ? 0x30207cUL : 0x102478UL)
-#define REG_TAG_X             (ft8xx_model ? 0x302074UL : 0x102470UL)
-#define REG_TAG_Y             (ft8xx_model ? 0x302078UL : 0x102474UL)
-#define REG_TOUCH_ADC_MODE    (ft8xx_model ? 0x302108UL : 0x1024f4UL)
-#define REG_TOUCH_CHARGE      (ft8xx_model ? 0x30210cUL : 0x1024f8UL)
-#define REG_TOUCH_DIRECT_XY   (ft8xx_model ? 0x30218cUL : 0x102574UL)
+#define RAM_CMD (ft8xx_model ? 0x308000UL : 0x108000UL)
+#define RAM_DL (ft8xx_model ? 0x300000UL : 0x100000UL)
+#define REG_CLOCK (ft8xx_model ? 0x302008UL : 0x102408UL)
+#define REG_CMD_DL (ft8xx_model ? 0x302100UL : 0x1024ecUL)
+#define REG_CMD_READ (ft8xx_model ? 0x3020f8UL : 0x1024e4UL)
+#define REG_CMD_WRITE (ft8xx_model ? 0x3020fcUL : 0x1024e8UL)
+#define REG_CPURESET (ft8xx_model ? 0x302020UL : 0x10241cUL)
+#define REG_CSPREAD (ft8xx_model ? 0x302068UL : 0x102464UL)
+#define REG_DITHER (ft8xx_model ? 0x302060UL : 0x10245cUL)
+#define REG_DLSWAP (ft8xx_model ? 0x302054UL : 0x102450UL)
+#define REG_FRAMES (ft8xx_model ? 0x302004UL : 0x102404UL)
+#define REG_FREQUENCY (ft8xx_model ? 0x30200cUL : 0x10240cUL)
+#define REG_GPIO (ft8xx_model ? 0x302094UL : 0x102490UL)
+#define REG_GPIO_DIR (ft8xx_model ? 0x302090UL : 0x10248cUL)
+#define REG_HCYCLE (ft8xx_model ? 0x30202cUL : 0x102428UL)
+#define REG_HOFFSET (ft8xx_model ? 0x302030UL : 0x10242cUL)
+#define REG_HSIZE (ft8xx_model ? 0x302034UL : 0x102430UL)
+#define REG_HSYNC0 (ft8xx_model ? 0x302038UL : 0x102434UL)
+#define REG_HSYNC1 (ft8xx_model ? 0x30203cUL : 0x102438UL)
+#define REG_ID (ft8xx_model ? 0x302000UL : 0x102400UL)
+#define REG_INT_EN (ft8xx_model ? 0x3020acUL : 0x10249cUL)
+#define REG_INT_FLAGS (ft8xx_model ? 0x3020a8UL : 0x102498UL)
+#define REG_INT_MASK (ft8xx_model ? 0x3020b0UL : 0x1024a0UL)
+#define REG_MACRO_0 (ft8xx_model ? 0x3020d8UL : 0x1024c8UL)
+#define REG_MACRO_1 (ft8xx_model ? 0x3020dcUL : 0x1024ccUL)
+#define REG_OUTBITS (ft8xx_model ? 0x30205cUL : 0x102458UL)
+#define REG_PCLK (ft8xx_model ? 0x302070UL : 0x10246cUL)
+#define REG_PCLK_POL (ft8xx_model ? 0x30206cUL : 0x102468UL)
+#define REG_PLAY (ft8xx_model ? 0x30208cUL : 0x102488UL)
+#define REG_PLAYBACK_FORMAT (ft8xx_model ? 0x3020c4UL : 0x1024b4UL)
+#define REG_PLAYBACK_FREQ (ft8xx_model ? 0x3020c0UL : 0x1024b0UL)
+#define REG_PLAYBACK_LENGTH (ft8xx_model ? 0x3020b8UL : 0x1024a8UL)
+#define REG_PLAYBACK_LOOP (ft8xx_model ? 0x3020c8UL : 0x1024b8UL)
+#define REG_PLAYBACK_PLAY (ft8xx_model ? 0x3020ccUL : 0x1024bcUL)
+#define REG_PLAYBACK_READPTR (ft8xx_model ? 0x3020bcUL : 0x1024acUL)
+#define REG_PLAYBACK_START (ft8xx_model ? 0x3020b4UL : 0x1024a4UL)
+#define REG_PWM_DUTY (ft8xx_model ? 0x3020d4UL : 0x1024c4UL)
+#define REG_PWM_HZ (ft8xx_model ? 0x3020d0UL : 0x1024c0UL)
+#define REG_ROTATE (ft8xx_model ? 0x302058UL : 0x102454UL)
+#define REG_SOUND (ft8xx_model ? 0x302088UL : 0x102484UL)
+#define REG_SWIZZLE (ft8xx_model ? 0x302064UL : 0x102460UL)
+#define REG_TAG (ft8xx_model ? 0x30207cUL : 0x102478UL)
+#define REG_TAG_X (ft8xx_model ? 0x302074UL : 0x102470UL)
+#define REG_TAG_Y (ft8xx_model ? 0x302078UL : 0x102474UL)
+#define REG_TOUCH_ADC_MODE (ft8xx_model ? 0x302108UL : 0x1024f4UL)
+#define REG_TOUCH_CHARGE (ft8xx_model ? 0x30210cUL : 0x1024f8UL)
+#define REG_TOUCH_DIRECT_XY (ft8xx_model ? 0x30218cUL : 0x102574UL)
 #define REG_TOUCH_DIRECT_Z1Z2 (ft8xx_model ? 0x302190UL : 0x102578UL)
-#define REG_TOUCH_MODE        (ft8xx_model ? 0x302104UL : 0x1024f0UL)
-#define REG_TOUCH_OVERSAMPLE  (ft8xx_model ? 0x302114UL : 0x102500UL)
-#define REG_TOUCH_RAW_XY      (ft8xx_model ? 0x30211cUL : 0x102508UL)
-#define REG_TOUCH_RZ          (ft8xx_model ? 0x302120UL : 0x10250cUL)
-#define REG_TOUCH_RZTHRESH    (ft8xx_model ? 0x302118UL : 0x102504UL)
-#define REG_TOUCH_SCREEN_XY   (ft8xx_model ? 0x302124UL : 0x102510UL)
-#define REG_TOUCH_SETTLE      (ft8xx_model ? 0x302110UL : 0x1024fcUL)
-#define REG_TOUCH_TAG         (ft8xx_model ? 0x30212cUL : 0x102518UL)
-#define REG_TOUCH_TAG_XY      (ft8xx_model ? 0x302128UL : 0x102514UL)
+#define REG_TOUCH_MODE (ft8xx_model ? 0x302104UL : 0x1024f0UL)
+#define REG_TOUCH_OVERSAMPLE (ft8xx_model ? 0x302114UL : 0x102500UL)
+#define REG_TOUCH_RAW_XY (ft8xx_model ? 0x30211cUL : 0x102508UL)
+#define REG_TOUCH_RZ (ft8xx_model ? 0x302120UL : 0x10250cUL)
+#define REG_TOUCH_RZTHRESH (ft8xx_model ? 0x302118UL : 0x102504UL)
+#define REG_TOUCH_SCREEN_XY (ft8xx_model ? 0x302124UL : 0x102510UL)
+#define REG_TOUCH_SETTLE (ft8xx_model ? 0x302110UL : 0x1024fcUL)
+#define REG_TOUCH_TAG (ft8xx_model ? 0x30212cUL : 0x102518UL)
+#define REG_TOUCH_TAG_XY (ft8xx_model ? 0x302128UL : 0x102514UL)
 #define REG_TOUCH_TRANSFORM_A (ft8xx_model ? 0x302150UL : 0x10251cUL)
 #define REG_TOUCH_TRANSFORM_B (ft8xx_model ? 0x302154UL : 0x102520UL)
 #define REG_TOUCH_TRANSFORM_C (ft8xx_model ? 0x302158UL : 0x102524UL)
 #define REG_TOUCH_TRANSFORM_D (ft8xx_model ? 0x30215cUL : 0x102528UL)
 #define REG_TOUCH_TRANSFORM_E (ft8xx_model ? 0x302160UL : 0x10252cUL)
 #define REG_TOUCH_TRANSFORM_F (ft8xx_model ? 0x302164UL : 0x102530UL)
-#define REG_TRACKER           (ft8xx_model ? 0x309000UL : 0x109000UL)
-#define REG_TRIM              (ft8xx_model ? 0x302180UL : 0x10256cUL)
-#define REG_VCYCLE            (ft8xx_model ? 0x302040UL : 0x10243cUL)
-#define REG_VOFFSET           (ft8xx_model ? 0x302044UL : 0x102440UL)
-#define REG_VOL_PB            (ft8xx_model ? 0x302080UL : 0x10247cUL)
-#define REG_VOL_SOUND         (ft8xx_model ? 0x302084UL : 0x102480UL)
-#define REG_VSIZE             (ft8xx_model ? 0x302048UL : 0x102444UL)
-#define REG_VSYNC0            (ft8xx_model ? 0x30204cUL : 0x102448UL)
-#define REG_VSYNC1            (ft8xx_model ? 0x302050UL : 0x10244cUL)
-#define FONT_ROOT             (ft8xx_model ? 0x2ffffcUL : 0x0ffffcUL)
+#define REG_TRACKER (ft8xx_model ? 0x309000UL : 0x109000UL)
+#define REG_TRIM (ft8xx_model ? 0x302180UL : 0x10256cUL)
+#define REG_VCYCLE (ft8xx_model ? 0x302040UL : 0x10243cUL)
+#define REG_VOFFSET (ft8xx_model ? 0x302044UL : 0x102440UL)
+#define REG_VOL_PB (ft8xx_model ? 0x302080UL : 0x10247cUL)
+#define REG_VOL_SOUND (ft8xx_model ? 0x302084UL : 0x102480UL)
+#define REG_VSIZE (ft8xx_model ? 0x302048UL : 0x102444UL)
+#define REG_VSYNC0 (ft8xx_model ? 0x30204cUL : 0x102448UL)
+#define REG_VSYNC1 (ft8xx_model ? 0x302050UL : 0x10244cUL)
+#define FONT_ROOT (ft8xx_model ? 0x2ffffcUL : 0x0ffffcUL)
 
 // FT81x only registers
-#define REG_CMDB_SPACE                       0x302574UL
-#define REG_CMDB_WRITE                       0x302578UL
-#define REG_MEDIAFIFO_READ                   0x309014UL
-#define REG_MEDIAFIFO_WRITE                  0x309018UL
+#define REG_CMDB_SPACE 0x302574UL
+#define REG_CMDB_WRITE 0x302578UL
+#define REG_MEDIAFIFO_READ 0x309014UL
+#define REG_MEDIAFIFO_WRITE 0x309018UL
 
 // FT815 only registers
-#define REG_FLASH_SIZE                       0x00309024 
-#define REG_FLASH_STATUS                     0x003025f0 
-#define REG_ADAPTIVE_FRAMERATE               0x0030257c
+#define REG_FLASH_SIZE 0x00309024
+#define REG_FLASH_STATUS 0x003025f0
+#define REG_ADAPTIVE_FRAMERATE 0x0030257c
 
-#define RED                  2
-#define GREEN                3
-#define BLUE                 4
-#define ALPHA                5
+#define RED 2
+#define GREEN 3
+#define BLUE 4
+#define ALPHA 5
 
 #define VERTEX2II(x, y, handle, cell) \
-        ((2UL << 30) | (((x) & 511UL) << 21) | (((y) & 511UL) << 12) | (((handle) & 31) << 7) | (((cell) & 127) << 0))
+  ((2UL << 30) | (((x)&511UL) << 21) | (((y)&511UL) << 12) | (((handle)&31) << 7) | (((cell)&127) << 0))
 
-#define ROM_PIXEL_FF        0xc0400UL
+#define ROM_PIXEL_FF 0xc0400UL
 
-#define WII_A      (1 << 12)
-#define WII_B      (1 << 14)
+#define WII_A (1 << 12)
+#define WII_B (1 << 14)
 #define WII_SELECT (1 << 4)
-#define WII_HOME   (1 << 3)
-#define WII_START  (1 << 2)
-#define WII_X      (1 << 11)
-#define WII_Y      (1 << 13)
-#define WII_UP     (1 << 8)
-#define WII_DOWN   (1 << 6)
-#define WII_LEFT   (1 << 9)
-#define WII_RIGHT  (1 << 7)
+#define WII_HOME (1 << 3)
+#define WII_START (1 << 2)
+#define WII_X (1 << 11)
+#define WII_Y (1 << 13)
+#define WII_UP (1 << 8)
+#define WII_DOWN (1 << 6)
+#define WII_LEFT (1 << 9)
+#define WII_RIGHT (1 << 7)
 
-class Poly {
-    int x0, y0, x1, y1;
-    int x[8], y[8];
-    byte n;
-    void restart() {
-      n = 0;
-      x0 = (1 << GD.vxf) * GD.w;
-      x1 = 0;
-      y0 = (1 << GD.vxf) * GD.h;
-      y1 = 0;
-    }
-    void perim() {
-      for (byte i = 0; i < n; i++)
-        GD.Vertex2f(x[i], y[i]);
-      GD.Vertex2f(x[0], y[0]);
-    }
-  public:
-    void begin() {
-      restart();
+class Poly
+{
+  int x0, y0, x1, y1;
+  int x[8], y[8];
+  byte n;
+  void restart()
+  {
+    n = 0;
+    x0 = (1 << GD.vxf) * GD.w;
+    x1 = 0;
+    y0 = (1 << GD.vxf) * GD.h;
+    y1 = 0;
+  }
+  void perim()
+  {
+    for (byte i = 0; i < n; i++)
+      GD.Vertex2f(x[i], y[i]);
+    GD.Vertex2f(x[0], y[0]);
+  }
 
-      GD.ColorMask(0,0,0,0);
-      GD.StencilOp(KEEP, INVERT);
-      GD.StencilFunc(ALWAYS, 255, 255);
-    }
-    void v(int _x, int _y) {
-      x0 = std::min(x0, _x >> GD.vxf);
-      x1 = std::max(x1, _x >> GD.vxf);
-      y0 = std::min(y0, _y >> GD.vxf);
-      y1 = std::max(y1, _y >> GD.vxf);
-      x[n] = _x;
-      y[n] = _y;
-      n++;
-    }
-    void paint() {
-      x0 = std::max(0, x0);
-      y0 = std::max(0, y0);
-      x1 = std::min((1 << GD.vxf) * GD.w, x1);
-      y1 = std::min((1 << GD.vxf) * GD.h, y1);
-      GD.ScissorXY(x0, y0);
-      GD.ScissorSize(x1 - x0 + 1, y1 - y0 + 1);
-      GD.Begin(EDGE_STRIP_B);
-      perim();
-    }
-    void finish() {
-      GD.ColorMask(1,1,1,1);
-      GD.StencilFunc(EQUAL, 255, 255);
+public:
+  void begin()
+  {
+    restart();
 
-      GD.Begin(EDGE_STRIP_R);
-      GD.Vertex2f(0, 0);
-      GD.Vertex2f(0, (1 << GD.vxf) * GD.h);
-    }
-    void draw() {
-      paint();
-      finish();
-    }
-    void outline() {
-      GD.Begin(LINE_STRIP);
-      perim();
-    }
+    GD.ColorMask(0, 0, 0, 0);
+    GD.StencilOp(KEEP, INVERT);
+    GD.StencilFunc(ALWAYS, 255, 255);
+  }
+  void v(int _x, int _y)
+  {
+    x0 = std::min(x0, _x >> GD.vxf);
+    x1 = std::max(x1, _x >> GD.vxf);
+    y0 = std::min(y0, _y >> GD.vxf);
+    y1 = std::max(y1, _y >> GD.vxf);
+    x[n] = _x;
+    y[n] = _y;
+    n++;
+  }
+  void paint()
+  {
+    x0 = std::max(0, x0);
+    y0 = std::max(0, y0);
+    x1 = std::min((1 << GD.vxf) * GD.w, x1);
+    y1 = std::min((1 << GD.vxf) * GD.h, y1);
+    GD.ScissorXY(x0, y0);
+    GD.ScissorSize(x1 - x0 + 1, y1 - y0 + 1);
+    GD.Begin(EDGE_STRIP_B);
+    perim();
+  }
+  void finish()
+  {
+    GD.ColorMask(1, 1, 1, 1);
+    GD.StencilFunc(EQUAL, 255, 255);
+
+    GD.Begin(EDGE_STRIP_R);
+    GD.Vertex2f(0, 0);
+    GD.Vertex2f(0, (1 << GD.vxf) * GD.h);
+  }
+  void draw()
+  {
+    paint();
+    finish();
+  }
+  void outline()
+  {
+    GD.Begin(LINE_STRIP);
+    perim();
+  }
 };
 
-class Streamer {
+class Streamer
+{
+
 public:
   void begin(const char *rawsamples,
              uint16_t freq = 44100,
              byte format = ADPCM_SAMPLES,
-             uint32_t _base = (0x40000UL - 4096), uint16_t size = 4096) {}
-  int feed() {}
-  void progress(uint16_t &val, uint16_t &range) {}
-};
+             uint32_t _base = (0x40000UL - 8192), uint16_t size = 8192)
+  {
+    GD.__end();
+    FRESULT res = f_open(&samples, rawsamples, FA_READ | FA_OPEN_EXISTING);
+    fsize = f_size(&samples);
 
+    GD.resume();
+
+    base = _base;
+    mask = size - 1;
+    wp = 0;
+    foffset = 0;
+
+    for (byte i = 10; i; i--)
+      feed();
+
+    res = f_close(&samples);
+
+    GD.sample(base, size, freq, format, 1);
+  }
+  int feed()
+  {
+    UINT br;
+
+    uint16_t rp = GD.rd32(REG_PLAYBACK_READPTR) - base;
+
+    byte buf[512];
+    GD.__end();
+
+    FRESULT res = f_lseek(&samples, foffset);
+    res = f_read(&samples, buf, 512, &br);
+    GD.resume();
+    GD.cmd_memwrite(base + wp, 512);
+    GD.copyram((byte *)buf, 512);
+    wp = (wp + 512) & mask;
+    foffset += br;
+
+    return foffset < fsize;
+  }
+
+  void progress(uint16_t &val, uint16_t &range)
+  {
+    uint32_t m = fsize;
+    uint32_t p = std::min(foffset, m);
+    while (m > 0x10000)
+    {
+      m >>= 1;
+      p >>= 1;
+    }
+    val = p;
+    range = m;
+  }
+
+private:
+  uint32_t base;
+  uint16_t mask;
+  uint16_t wp;
+  uint32_t foffset;
+  uint32_t fsize;
+
+  FIL samples;
+};
 
 ////////////////////////////////////////////////////////////////////////
 //  TileMap: maps made with the "tiled" map editor
 ////////////////////////////////////////////////////////////////////////
 
-class TileMap {
+class TileMap
+{
   uint32_t chunkstart;
   int chunkw, chunkh;
   int stride;
@@ -753,18 +832,20 @@ class TileMap {
 
 public:
   uint16_t w, h;
-  void begin(uint32_t loadpoint) {
+  void begin(uint32_t loadpoint)
+  {
     GD.finish();
-    w      = GD.rd16(loadpoint +  0);
-    h      = GD.rd16(loadpoint +  2);
-    chunkw = GD.rd16(loadpoint +  4);
-    chunkh = GD.rd16(loadpoint +  6);
-    stride = GD.rd16(loadpoint +  8);
+    w = GD.rd16(loadpoint + 0);
+    h = GD.rd16(loadpoint + 2);
+    chunkw = GD.rd16(loadpoint + 4);
+    chunkh = GD.rd16(loadpoint + 6);
+    stride = GD.rd16(loadpoint + 8);
     layers = GD.rd16(loadpoint + 10);
     bpc = (4 * 16);
     chunkstart = loadpoint + 12;
   }
-  void draw(uint16_t x, uint16_t y, uint16_t layermask = ~0) {
+  void draw(uint16_t x, uint16_t y, uint16_t layermask = ~0)
+  {
     int16_t chunk_x = (x / chunkw);
     int16_t ox0 = -(x % chunkw);
     int16_t chunk_y = (y / chunkh);
@@ -773,11 +854,13 @@ public:
     GD.Begin(BITMAPS);
     GD.SaveContext();
     GD.BlendFunc(ONE, ONE_MINUS_SRC_ALPHA);
-    while (oy < GD.h) {
+    while (oy < GD.h)
+    {
       int16_t ox = ox0;
       GD.VertexTranslateY(oy << 4);
       uint32_t pos = chunkstart + (chunk_x + long(stride) * chunk_y) * layers * bpc;
-      while (ox < GD.w) {
+      while (ox < GD.w)
+      {
         GD.VertexTranslateX(ox << 4);
         for (byte layer = 0; layer < layers; layer++)
           if (layermask & (1 << layer))
@@ -790,27 +873,30 @@ public:
     }
     GD.RestoreContext();
   }
-  void draw(xy pos) {
+  void draw(xy pos)
+  {
     draw(pos.x >> 4, pos.y >> 4);
   }
-  uint32_t addr(uint16_t x, uint16_t y, byte layer) {
+  uint32_t addr(uint16_t x, uint16_t y, byte layer)
+  {
     int16_t tx = (x / (chunkw >> 2));
     int16_t ty = (y / (chunkh >> 2));
-    return
-      chunkstart +
-      ((tx >> 2) + long(stride) * (ty >> 2)) * layers * bpc +
-      (tx & 3) * 4 +
-      (ty & 3) * 16 +
-      layer * 64;
+    return chunkstart +
+           ((tx >> 2) + long(stride) * (ty >> 2)) * layers * bpc +
+           (tx & 3) * 4 +
+           (ty & 3) * 16 +
+           layer * 64;
   }
-  int read(uint16_t x, uint16_t y, byte layer) {
+  int read(uint16_t x, uint16_t y, byte layer)
+  {
     uint32_t op = GD.rd32(addr(x, y, layer));
     if ((op >> 24) == 0x2d)
       return 0;
     else
       return 1 + (op & 2047);
   }
-  void write(uint16_t x, uint16_t y, byte layer, int tile) {
+  void write(uint16_t x, uint16_t y, byte layer, int tile)
+  {
     uint32_t op;
     uint32_t a = addr(x, y, layer);
     if (tile == 0)
@@ -819,16 +905,17 @@ public:
       op = (GD.rd32(a) & ~2047) | ((tile - 1) & 2047);
     GD.wr32(a, op);
   }
-  int read(xy pos, byte layer) {
+  int read(xy pos, byte layer)
+  {
     return read(pos.x >> 4, pos.y >> 4, layer);
   }
-  void write(xy pos, byte layer, int tile) {
+  void write(xy pos, byte layer, int tile)
+  {
     write(pos.x >> 4, pos.y >> 4, layer, tile);
   }
 };
 
 #undef PROGMEM
 #define PROGMEM
-
 
 #endif

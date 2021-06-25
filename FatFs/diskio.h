@@ -4,13 +4,17 @@
 
 #ifndef _DISKIO_DEFINED
 #define _DISKIO_DEFINED
+#include "ff.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+typedef BYTE uint8_t;
 /* Status of Disk Functions */
 typedef BYTE	DSTATUS;
+typedef DWORD FSIZE_t;
+typedef DWORD LBA_t;
 
 /* Results of Disk Functions */
 typedef enum {

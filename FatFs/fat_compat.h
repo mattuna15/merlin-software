@@ -4,6 +4,10 @@
 
 #include "ff.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define MAXDIRENTRIES 8
 #define SECTOR_BUFFER_SIZE 2352
 
@@ -121,5 +125,9 @@ void ChangeDirectoryName(unsigned char *name);
 void fat_switch_to_usb(void);
 int8_t fat_medium_present(void);
 int8_t fat_uses_mmc(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -46,6 +46,11 @@
 	XDEF IntHandler5
 	XDEF IntHandler6
 	XDEF IntHandler7
+
+		XREF PrintDirectory
+		XREF FindDrive
+		XREF f_open
+		XREF f_close
 		XREF outbyte
 		XREF inbyte_noecho
 		XREF havebyte
@@ -291,6 +296,8 @@ file_id		ds.l	1		* load/save file ID
 
 main
 
+	jsr FindDrive
+
 	; Set up interrupt vectors...
 	lea	.int1,a0
 	move.l	a0,$64
@@ -327,49 +334,6 @@ ACIA_2   EQU      $00010041        * Auxiliary ACIA base address
 VEC_OUT
         jsr outbyte
         RTS
-
-* Output character to the second (aux) serial port from register d0.b
-
- ifne   FLASH_SUPPORT
-
-VEC_OUT2
-        MOVEM.L  A0/D1,-(A7)    * Save working registers
-        LEA.L    ACIA_2,A0      * A0 points to console ACIA
-TXNOTREADY1
-        MOVE.B   (A0),D1        * Read ACIA status
-        BTST     #1,D1          * Test TDRE bit
-        BEQ.s    TXNOTREADY1    * Until ACIA Tx ready
-        MOVE.B   D0,2(A0)       * Write character to send
-        MOVEM.L  (A7)+,A0/D1    * Restore working registers
-        RTS
-
-* Output null terminated string pointed to by A0 to first serial port.
-
-PRINTSTRING1
-        MOVEM.L  A0/D0,-(A7)    * Save working registers
-LP1     CMP.B    #0,(A0)        * Is it null?
-        BEQ      RET1           * If so, return
-        MOVE.B   (A0)+,D0       * Get character and advance pointer
-        JSR      VEC_OUT        * Output it
-        BRA      LP1            * Continue for rest of string
-
-RET1    MOVEM.L  (A7)+,A0/D0    * Restore working registers
-        RTS                     * Return
-
-* Output null terminated string pointed to by A0 to second serial port.
-
-PRINTSTRING2
-        MOVEM.L  A0/D0,-(A7)    * Save working registers
-LP2     CMP.B    #0,(A0)        * Is it null?
-        BEQ      RET2           * If so, return
-        MOVE.B   (A0)+,D0       * Get character and advance pointer
-        JSR      VEC_OUT2       * Output it
-        BRA      LP2            * Continue for rest of string
-
-RET2    MOVEM.L  (A7)+,A0/D0    * Restore working registers
-        RTS                     * Return
-
- endc
 
 *************************************************************************************
 *
@@ -627,6 +591,7 @@ LAB_COLD
         trap            #14                             * Call TRAP14 handler
 
 LAB_sizok
+
 	MOVEA.l	a0,a3				* copy RAM base to a3
 	ADDA.l	d0,a0				* a0 is top of RAM
 	MOVE.l	a0,Ememl(a3)		* set end of mem
@@ -3487,6 +3452,11 @@ LAB_DIM
 
 	RTS
 
+LAB_DIR
+
+	jsr PrintDirectory
+
+	rts
 
 *************************************************************************************
 *
@@ -8284,7 +8254,8 @@ TK_GET		EQU TK_WIDTH+1		* $A4
 TK_SWAP		EQU TK_GET+1		* $A5
 TK_BITSET		EQU TK_SWAP+1		* $A6
 TK_BITCLR		EQU TK_BITSET+1		* $A7
-TK_TAB		EQU TK_BITCLR+1		* $A8
+TK_DIR		EQU TK_BITCLR+1		* $e5
+TK_TAB		EQU TK_DIR+1		* $A8
 TK_ELSE		EQU TK_TAB+1		* $A9
 TK_TO			EQU TK_ELSE+1		* $AA
 TK_FN			EQU TK_TO+1			* $AB
@@ -8345,6 +8316,7 @@ TK_LEFTS		EQU TK_SADD+1		* $E1
 TK_RIGHTS		EQU TK_LEFTS+1		* $E2
 TK_MIDS		EQU TK_RIGHTS+1		* $E3
 TK_USINGS		EQU TK_MIDS+1		* $E4
+
 
 
 *************************************************************************************
@@ -8689,6 +8661,7 @@ LAB_CTBL
 	dc.w	LAB_SWAP-LAB_CTBL			* SWAP
 	dc.w	LAB_BITSET-LAB_CTBL		* BITSET
 	dc.w	LAB_BITCLR-LAB_CTBL		* BITCLR
+	dc.w	LAB_DIR-LAB_CTBL			* DIr
 
 
 *************************************************************************************
@@ -9001,6 +8974,8 @@ LAB_KEYT
 	dc.w	KEY_UNTIL-TAB_STAR		* UNTIL
 	dc.b	'W',3
 	dc.w	KEY_WHILE-TAB_STAR		* WHILE
+	dc.b	'D',1
+	dc.w	KEY_DIR-TAB_STAR			* DIM
 
 	dc.b	'+',-1
 	dc.w	KEY_PLUS-TAB_STAR			* +
@@ -9243,6 +9218,8 @@ KEY_DEF
 	dc.b	'EF',TK_DEF				* DEF
 KEY_DIM
 	dc.b	'IM',TK_DIM				* DIM
+KEY_DIR
+	dc.b	'IR',TK_DIR				* DIR
 KEY_DOKE
 	dc.b	'OKE',TK_DOKE			* DOKE
 KEY_DO

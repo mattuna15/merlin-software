@@ -55,12 +55,12 @@ unsigned char FindDrive(void) {
 		// get start of first partition
 		for(partitioncount=4;(partitions[partitioncount-1].sectors==0) && (partitioncount>1); --partitioncount);
 
-		printf("Partition Count: %d\r\n",partitioncount);
+		//printf("Partition Count: %d\r\n",partitioncount);
 		int i;
 		for(i=0;i<partitioncount;++i) {
-			printf("Partition: %d",i);
-			printf("  Start: %ld",partitions[i].startlba);
-			printf("  Size: %ld\r\n",partitions[i].sectors);
+			//printf("Partition: %d",i);
+			//printf("  Start: %ld",partitions[i].startlba);
+			//printf("  Size: %ld\r\n",partitions[i].sectors);
 		}
 
 	}
@@ -69,36 +69,36 @@ unsigned char FindDrive(void) {
 
 	// some debug output
 
-	printf("Partition type: ");
+	//printf("Partition type: ");
 	switch (fs.fs_type) {
 	case 0:
-		printf("NONE");
+		//printf("NONE");
 		break;
 	case FS_FAT12:
-		printf("FAT12");
+		//printf("FAT12");
 		break;
 	case FS_FAT16:
-		printf("FAT16");
+		//printf("FAT16");
 		break;
 	case FS_FAT32:
-		printf("FAT32");
+		printf("\r\n\r\nFAT32 SD Card found.\r\n");
 		break;
 	case FS_EXFAT:
-		printf("EXFAT");
+		//printf("EXFAT");
 		break;
 	default:
-		printf("UNKNOWN");
+		//printf("UNKNOWN");
 		break;
 	}
-	printf("\r\n");
-	printf("fat_size: %lu\r\n", fs.fsize);
-	printf("fat_number: %u\r\n", fs.n_fats);
-	printf("fat_start: %lu\r\n", fs.fatbase);
-	printf("root_directory_start: %lu\r\n", fs.dirbase);
-	printf("dir_entries: %u\r\n", fs.n_rootdir);
-	printf("data_start: %lu\r\n", fs.database);
-	printf("cluster_size: %u\r\n", fs.csize);
-	printf("free_clusters: %u\r\n", fs.free_clst);
+	//printf("\r\n");
+	//printf("fat_size: %lu\r\n", fs.fsize);
+	//printf("fat_number: %u\r\n", fs.n_fats);
+	//printf("fat_start: %lu\r\n", fs.fatbase);
+	//printf("root_directory_start: %lu\r\n", fs.dirbase);
+	//printf("dir_entries: %u\r\n", fs.n_rootdir);
+	//printf("data_start: %lu\r\n", fs.database);
+	//printf("cluster_size: %u\r\n", fs.csize);
+	//printf("free_clusters: %u\r\n", fs.free_clst);
 
 	return(1);
 }
@@ -107,7 +107,7 @@ unsigned char FindDrive(void) {
 void ChangeDirectoryName(unsigned char *name) {
 	uint32_t      iPreviousDirectoryTmp = fs.cdir;
 
-	printf("ChangeDirectoryName: %s -> %s = ", cwd, name);
+	//printf("ChangeDirectoryName: %s -> %s = ", cwd, name);
 	if(name[0] == '/') {
 		// Absolute path
 		strcpy(sector_buffer, name);
@@ -135,7 +135,7 @@ void ChangeDirectoryName(unsigned char *name) {
 		strcpy(cwd, sector_buffer);
 	}
 
-	printf("%s\r\n", cwd);
+	//printf("%s\r\n", cwd);
 }
 
 // Simplified function which doesn't use any library routines
@@ -225,7 +225,7 @@ FRESULT FileWriteBlock(FIL *file, unsigned char *pBuffer) {
 	UINT bw;
 	FRESULT res = (f_write(file, pBuffer, 512, &bw));
 
-	printf("\r\n Bytes written %d, Result: %d\r\n",bw,res);
+	//printf("\r\n Bytes written %d, Result: %d\r\n",bw,res);
 
 	return res;
 }
@@ -396,7 +396,7 @@ char ScanDirectory(unsigned long mode, char *extension, unsigned char options) {
 		{
 			if (mode == SCAN_INIT) { // initial directory scan (first 8 entries)
 				if (nDirEntries < MAXDIRENTRIES) {
-					//printf("fname=%s, altname=%s\r\n", fil.fname, fil.altname);
+					////printf("fname=%s, altname=%s\r\n", fil.fname, fil.altname);
 					DirEntries[nDirEntries] = fil;
 					nDirEntries++;
 				} else if (CompareDirEntries(&fil, &DirEntries[sort_table[MAXDIRENTRIES-1]]) < 0) {// compare new entry with the l
@@ -487,7 +487,7 @@ char ScanDirectory(unsigned long mode, char *extension, unsigned char options) {
 			} else if (mode == SCAN_NEXT_PAGE) {
 				if (CompareDirEntries(&fil, &DirEntries[sort_table[MAXDIRENTRIES-1]]) > 0) { // compare with the last visible en
 					if (nNewEntries < MAXDIRENTRIES) {// initial directory scan (first 8 entries)
-						//printf("fname=%s, altname=%s\r\n", fil.fname, fil.altname);
+						////printf("fname=%s, altname=%s\r\n", fil.fname, fil.altname);
 						t_DirEntries[nNewEntries] = fil;
 						t_sort_table[nNewEntries] = nNewEntries; // init sorting table
 						nNewEntries++;
@@ -500,7 +500,7 @@ char ScanDirectory(unsigned long mode, char *extension, unsigned char options) {
 			} else if (mode == SCAN_PREV_PAGE) {
 				if (CompareDirEntries(&fil, &DirEntries[sort_table[0]]) < 0) { // compare with the last visible en
 					if (nNewEntries < MAXDIRENTRIES) {// initial directory scan (first 8 entries)
-						//printf("fname=%s, altname=%s\r\n", fil.fname, fil.altname);
+						////printf("fname=%s, altname=%s\r\n", fil.fname, fil.altname);
 						t_DirEntries[nNewEntries] = fil;
 						t_sort_table[nNewEntries] = nNewEntries; // init sorting table
 						nNewEntries++;
