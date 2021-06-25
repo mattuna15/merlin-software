@@ -37,6 +37,23 @@
 * Ver 3.45 makes the handling of non existant variables consistent and gives the
 * option of not returning an error for a non existant variable. If this is the
 * behaviour you want just change novar to some non zero value
+	XDEF EnableInterrupts
+	XDEF DisableInterrupts
+	XDEF IntHandler1
+	XDEF IntHandler2
+	XDEF IntHandler3
+	XDEF IntHandler4
+	XDEF IntHandler5
+	XDEF IntHandler6
+	XDEF IntHandler7
+		XREF outbyte
+		XREF inbyte_noecho
+		XREF havebyte
+		XDEF main
+* Set the symbol FLASH_SUPPORT to 1 if you want to enable experimental
+* support for LOAD/SAVE using a Hobbytronics USB Flash Drive Host
+* Board.
+
 
 novar		EQU	0				* non existant variables cause errors
 
@@ -75,16 +92,229 @@ nobrk		EQU	0				* null response to INPUT causes a break
 *************************************************************************************
 
 
-	INCLUDE	"basic68k.inc"
-							* RAM offset definitions
 
-* Use this value to run out of ROM
-	ORG		$00C000			* past the vectors in a real system
-* Use this value to run out of RAM
-*	ORG		$000800			* past the vectors in a real system
+* This lot is in RAM
 
-ACIA_1   =      $00010040        * Console ACIA base address
-ACIA_2   =      $00010041        * Auxiliary ACIA base address
+*	OFFSET	0			* start of RAM
+
+ram_strt	ds.l	$1000		* allow 1K for the stack, this should be plenty
+					* for any BASIC program that doesn't do something
+					* silly, it could even be much less.
+ram_base
+LAB_WARM	ds.w	1		* BASIC warm start entry point
+Wrmjpv		ds.l	1		* BASIC warm start jump vector
+
+Usrjmp		ds.w	1		* USR function JMP address
+Usrjpv		ds.l	1		* USR function JMP vector
+
+* system dependant i/o vectors
+* these are in RAM and are set at start-up
+
+V_INPT		ds.w	1		* non halting scan input device entry point
+V_INPTv		ds.l	1		* non halting scan input device jump vector
+
+V_OUTP		ds.w	1		* send byte to output device entry point
+V_OUTPv		ds.l	1		* send byte to output device jump vector
+
+V_LOAD		ds.w	1		* load BASIC program entry point
+V_LOADv		ds.l	1		* load BASIC program jump vector
+
+V_SAVE		ds.w	1		* save BASIC program entry point
+V_SAVEv		ds.l	1		* save BASIC program jump vector
+
+V_CTLC		ds.w	1		* save CTRL-C check entry point
+V_CTLCv		ds.l	1		* save CTRL-C check jump vector
+
+Itemp		ds.l	1		* temporary integer	(for GOTO etc)
+
+Smeml		ds.l	1		* start of memory	(start of program)
+
+* the program is stored as a series of lines each line having the following format
+*
+*		ds.l	1		* pointer to the next line or $00000000 if [EOT]
+*		ds.l	1		* line number
+*		ds.b	n		* program bytes
+*		dc.b	$00		* [EOL] marker, there will be a second $00 byte, if
+*					* needed, to pad the line to an even number of bytes
+
+Sfncl		ds.l	1		* start of functions	(end of Program)
+
+* the functions are stored as function name, function execute pointer and function
+* variable name
+*
+*		ds.l	1		* name
+*		ds.l	1		* execute pointer
+*		ds.l	1		* function variable
+
+Svarl		ds.l	1		* start of variables	(end of functions)
+
+* the variables are stored as variable name, variable value
+*
+*		ds.l	1		* name
+*		ds.l	1		* packed float or integer value
+
+Sstrl		ds.l	1		* start of strings	(end of variables)
+
+* the strings are stored as string name, string pointer and string length
+*
+*		ds.l	1		* name
+*		ds.l	1		* string pointer
+*		ds.w	1		* string length
+
+Sarryl		ds.l	1		* start of arrays	(end of strings)
+
+* the arrays are stored as array name, array size, array dimensions count, array
+* dimensions upper bounds and array elements
+*
+*		ds.l	1		* name
+*		ds.l	1		* size including this header
+*		ds.w	1		* dimensions count
+*		ds.w	1		* 1st dimension upper bound
+*		ds.w	1		* 2nd dimension upper bound
+*		...			* ...
+*		ds.w	1		* nth dimension upper bound
+*
+* then (i1+1)*(i2+1)...*(in+1) of either ..
+*
+*		ds.l	1		* packed float or integer value
+*
+* .. if float or integer, or ..
+*
+*		ds.l	1		* string pointer
+*		ds.w	1		* string length
+*
+* .. if string
+
+Earryl		ds.l	1		* end of arrays		(start of free mem)
+Sstorl		ds.l	1		* string storage	(moving down)
+Ememl		ds.l	1		* end of memory		(upper bound of RAM)
+Sutill		ds.l	1		* string utility ptr
+Clinel		ds.l	1		* current line		(Basic line number)
+Blinel		ds.l	1		* break line		(Basic line number)
+
+Cpntrl		ds.l	1		* continue pointer
+Dlinel		ds.l	1		* current DATA line
+Dptrl		ds.l	1		* DATA pointer
+Rdptrl		ds.l	1		* read pointer
+Varname		ds.l	1		* current var name
+Cvaral		ds.l	1		* current var address
+Lvarpl		ds.l	1		* variable pointer for LET and FOR/NEXT
+
+des_sk_e	ds.l	6		* descriptor stack end address
+des_sk					* descriptor stack start address
+					* use a4 for the descriptor pointer
+		ds.w	1			
+Ibuffs		ds.l	$40		* start of input buffer
+Ibuffe		
+					* end of input buffer
+
+FAC1_m		ds.l	1		* FAC1 mantissa1
+FAC1_e		ds.w	1		* FAC1 exponent
+FAC1_s		EQU	FAC1_e+1	* FAC1 sign (b7)
+		ds.w	1			
+
+FAC2_m		ds.l	1		* FAC2 mantissa1
+FAC2_e		ds.l	1		* FAC2 exponent
+FAC2_s		EQU	FAC2_e+1	* FAC2 sign (b7)
+FAC_sc		EQU	FAC2_e+2	* FAC sign comparison, Acc#1 vs #2
+flag		EQU	FAC2_e+3	* flag byte for divide routine
+
+PRNlword	ds.l	1		* PRNG seed long word
+
+ut1_pl		ds.l	1		* utility pointer 1
+
+Asptl		ds.l	1		* array size/pointer
+Astrtl		ds.l	1		* array start pointer
+
+numexp		EQU	Astrtl		* string to float number exponent count
+expcnt		EQU	Astrtl+1	* string to float exponent count
+
+expneg		EQU	Astrtl+3	* string to float eval exponent -ve flag
+
+func_l		ds.l	1		* function pointer
+
+
+					* these two need to be a word aligned pair !
+Defdim		ds.w	1		* default DIM flag
+cosout		EQU	Defdim		* flag which CORDIC output (re-use byte)
+Dtypef		EQU	Defdim+1	* data type flag, $80=string, $40=integer, $00=float
+
+
+Binss		ds.l	4		* number to bin string start (32 chrs)
+
+Decss		ds.l	1		* number to decimal string start (16 chrs)
+		ds.w	1		*
+Usdss		ds.w	1		* unsigned decimal string start (10 chrs)
+
+Hexss		ds.l	2		* number to hex string start (8 chrs)
+
+BHsend		ds.w	1		* bin/decimal/hex string end
+
+
+prstk		ds.b	1		* stacked function index
+
+tpower		ds.b	1		* remember CORDIC power
+
+Asrch		ds.b	1		* scan-between-quotes flag, alt search character
+
+Dimcnt		ds.b	1		* # of dimensions
+
+Breakf		ds.b	1		* break flag, $00=END else=break
+Oquote		ds.b	1		* open quote flag (Flag: DATA; LIST; memory)
+Gclctd		ds.b	1		* garbage collected flag
+Sufnxf		ds.b	1		* subscript/FNX flag, 1xxx xxx = FN(0xxx xxx)
+Imode		ds.b	1		* input mode flag, $00=INPUT, $98=READ
+
+Cflag		ds.b	1		* comparison evaluation flag
+
+TabSiz		ds.b	1		* TAB step size
+
+comp_f		ds.b	1		* compare function flag, bits 0,1 and 2 used
+					* bit 2 set if >
+					* bit 1 set if =
+					* bit 0 set if <
+
+Nullct		ds.b	1		* nulls output after each line
+TPos		ds.b	1		* BASIC terminal position byte
+TWidth		ds.b	1		* BASIC terminal width byte
+Iclim		ds.b	1		* input column limit
+ccflag		ds.b	1		* CTRL-C check flag
+ccbyte		ds.b	1		* CTRL-C last received byte
+ccnull		ds.b	1		* CTRL-C last received byte 'life' timer
+
+* these variables for simulator load/save routines
+
+file_byte	ds.b	1		* load/save data byte
+file_id		ds.l	1		* load/save file ID
+
+		dc.w	0		* dummy even value and zero pad byte
+
+main
+
+	; Set up interrupt vectors...
+	lea	.int1,a0
+	move.l	a0,$64
+	lea	.int2,a0
+	move.l	a0,$68
+	lea	.int3,a0
+	move.l	a0,$6C
+	lea	.int4,a0
+	move.l	a0,$70
+	lea	.int5,a0
+	move.l	a0,$74
+	lea	.int6,a0
+	move.l	a0,$78
+	lea	.int7,a0
+	move.l	a0,$7C
+
+prg_strt
+
+
+ram_addr	EQU	$80000		* RAM start address
+ram_size	EQU	$aF0000		* RAM size
+
+ACIA_1   EQU      $00010040        * Console ACIA base address
+ACIA_2   EQU      $00010041        * Auxiliary ACIA base address
 
          BRA    code_start       * For convenience, so you can start from first address
 
@@ -95,14 +325,7 @@ ACIA_2   =      $00010041        * Auxiliary ACIA base address
 * Output character to the console from register d0.b
 
 VEC_OUT
-        MOVEM.L  A0/D1,-(A7)    * Save working registers
-        LEA.L    ACIA_1,A0      * A0 points to console ACIA
-TXNOTREADY
-        MOVE.B   (A0),D1        * Read ACIA status
-        BTST     #1,D1          * Test TDRE bit
-        BEQ.S    TXNOTREADY     * Until ACIA Tx ready
-        MOVE.B   D0,2(A0)       * Write character to send
-        MOVEM.L  (A7)+,A0/D1    * Restore working registers
+        jsr outbyte
         RTS
 
 * Output character to the second (aux) serial port from register d0.b
@@ -154,19 +377,17 @@ RET2    MOVEM.L  (A7)+,A0/D0    * Restore working registers
 * else return Cb=0 if there's no character available
 
 VEC_IN
-        MOVEM.L  A0/D1,-(A7)    * Save working registers
-        LEA.L    ACIA_1,A0      * A0 points to console ACIA
-        MOVE.B   (A0),D1        * Read ACIA status
-        BTST     #0,D1          * Test RDRF bit
-        BEQ.S    RXNOTREADY     * Branch if ACIA Rx not ready
-        MOVE.B   2(A0),D0       * Read character received
-        MOVEM.L  (A7)+,A0/D1    * Restore working registers
+		jsr havebyte
+		CMP #0,D0
+		BEQ.s RXNOTREADY
+		jsr inbyte_noecho
         ORI.B    #1,CCR         * Set the carry, flag we got a byte
         RTS                     * Return
 RXNOTREADY
-        MOVEM.L  (A7)+,A0/D1    * Restore working registers
         ANDI.B   #$FE,CCR       * Clear the carry, flag character not available
         RTS
+
+
 
 * Input routine used in LOAD mode to read file from USB flash storage.
 
@@ -541,7 +762,7 @@ LAB_UVER
 	ADD.l		d0,d0				* .......$ .......& ........ .......0
 	SWAP		d0				* ........ .......0 .......$ .......&
 	ROR.b		#1,d0				* ........ .......0 .......$ &.......
-	LSR.w		#1,d0				* ........ .......0 0....... $&.....­.
+	LSR.w		#1,d0				* ........ .......0 0....... $&.....ï¿½.
 	AND.b		#$C0,d0			* mask the type bits
 	MOVE.b	d0,Dtypef(a3)		* save the data type
 
@@ -1348,7 +1569,7 @@ LAB_FOR
 	MOVE.l	a0,(sp)			* push onto stack (and dump the return address)
 	MOVE.l	Clinel(a3),-(sp)		* push current line onto stack
 
-	MOVEQ		#TK_TO-$100,d0		* set "TO" token
+	MOVE.w		#TK_TO-$100,d0		* set "TO" token
 	BSR		LAB_SCCA			* scan for CHR$(d0) else syntax error/warm start
 	BSR		LAB_CTNM			* check if source is numeric, else type mismatch
 	MOVE.b	Dtypef(a3),-(sp)		* push the FOR variable data type onto stack
@@ -1801,8 +2022,8 @@ LAB_174B
 
 LAB_174E
 	MOVE.b	(a5)+,d0			* faster increment past THEN
-	MOVEQ		#TK_ELSE,d3			* set search for ELSE token
-	MOVEQ		#TK_IF,d4			* set search for IF token
+	MOVE.b		#TK_ELSE,d3			* set search for ELSE token
+	MOVE.b		#TK_IF,d4			* set search for IF token
 	MOVEQ		#0,d5				* clear the nesting depth
 LAB_1750
 	MOVE.b	(a5)+,d0			* get next BASIC byte & increment ptr
@@ -1998,7 +2219,7 @@ LAB_LET
 	MOVE.l	a0,Lvarpl(a3)		* save variable address
 	MOVE.b	Dtypef(a3),-(sp)		* push var data type, $80=string, $40=integer,
 							* $00=float
-	MOVEQ		#TK_EQUAL-$100,d0		* get = token
+	MOVE.w		#TK_EQUAL-$100,d0		* get = token
 	BSR		LAB_SCCA			* scan for CHR$(d0), else do syntax error/warm
 							* start
 	BSR		LAB_EVEX			* evaluate expression
@@ -2914,7 +3135,7 @@ LAB_GBYT
 	CMP.b		#$3A,d0			* compare with ":"
 	BCC.s		RTS_001			* exit if >= (not numeric, carry clear)
 
-	MOVEQ		#$D0,d6			* set -"0"
+	MOVe.b		#$D0,d6			* set -"0"
 	ADD.b		d6,d0				* add -"0"
 	SUB.b		d6,d0				* subtract -"0"
 RTS_001						* carry set if byte = "0"-"9"
@@ -3469,7 +3690,7 @@ LAB_1D4A
 	BEQ.s		LAB_1D4B			* branch if not
 
 	ADDQ.w	#2,d1				* 6 bytes per string entry
-	ADDQ.w	#(Sstrl-Svarl),a0		* move to string area
+	ADD.w	#(Sstrl-Svarl),a0		* move to string area
 
 LAB_1D4B
 	MOVEA.l	4(a0),a1			* get end address
@@ -3560,7 +3781,7 @@ LAB_1DD7
 	ADD.l		d1,d1				* .......$ .......& ........ .......0
 	SWAP		d1				* ........ .......0 .......$ .......&
 	ROR.b		#1,d1				* ........ .......0 .......$ &.......
-	LSR.w		#1,d1				* ........ .......0 0....... $&.....­.
+	LSR.w		#1,d1				* ........ .......0 0....... $&.....ï¿½.
 	AND.b		#$C0,d1			* mask the type bits
 	MOVE.b	d1,Dtypef(a3)		* save the data type
 
@@ -3933,7 +4154,7 @@ LAB_CKRN
 * perform DEF
 
 LAB_DEF
-	MOVEQ		#TK_FN-$100,d0		* get FN token
+	MOVE.w		#TK_FN-$100,d0		* get FN token
 	BSR		LAB_SCCA			* scan for CHR$(d0), else syntax error and
 							* warm start
 							* return character after d0
@@ -3949,7 +4170,7 @@ LAB_DEF
 	BSR		LAB_SVAR			* search for or create a variable
 							* return the variable address in a0
 	BSR		LAB_1BFB			* scan for ")", else do syntax error/warm start
-	MOVEQ		#TK_EQUAL-$100,d0		* = token
+	MOVE.w		#TK_EQUAL-$100,d0		* = token
 	BSR		LAB_SCCA			* scan for CHR$(A), else syntax error/warm start
 							* return character after d0
 	MOVE.l	Varname(a3),-(sp)		* push current variable name
@@ -4707,7 +4928,7 @@ LAB_GTBY
 LAB_EVBY
 	BSR		LAB_EVPI			* evaluate positive integer expression
 							* result in d0 and Itemp
-	MOVEQ		#$80,d1			* set mask/2
+	MOVE.w		#$80,d1			* set mask/2
 	ADD.l		d1,d1				* =$FFFFFF00
 	AND.l		d0,d1				* check top 24 bits
 	BNE		LAB_FCER			* if <> 0 do function call error/warm start
@@ -5820,7 +6041,7 @@ LAB_2831
 	BEQ.s		LAB_284J			* branch if mantissa = 0
 
 	MOVE.l	d1,-(sp)			* save d1
-	MOVEQ		#$A0,d1			* set for no floating bits
+	MOVE.w		#$A0,d1			* set for no floating bits
 	SUB.b		FAC1_e(a3),d1		* subtract FAC1 exponent
 	BCS		LAB_OFER			* do overflow if too big
 
@@ -5858,7 +6079,7 @@ LAB_284J
 * perform INT()
 
 LAB_INT
-	MOVEQ		#$A0,d0			* set for no floating bits
+	MOVE.w		#$A0,d0			* set for no floating bits
 	SUB.b		FAC1_e(a3),d0		* subtract FAC1 exponent
 	BLS.s		LAB_IRTS			* exit if exponent >= $A0
 							* (too big for fraction part!)
@@ -6661,7 +6882,7 @@ LAB_ATGO
 	MOVE.b	#$FF,cosout(a3)		* set inverse result needed
 LAB_ATLE
 	MOVE.l	FAC1_m(a3),d0		* get FAC1 mantissa
-	MOVEQ		#$82,d1			* set to correct exponent
+	MOVE.w		#$82,d1			* set to correct exponent
 	SUB.b		FAC1_e(a3),d1		* subtract FAC1 exponent (always <= 1)
 	LSR.l		d1,d0				* shift in two integer part bits
 	LEA		TAB_ATNC(pc),a0		* get pointer to arctan table
@@ -9223,8 +9444,74 @@ LAB_RMSG
 	dc.b	$0D,$0A,'Ready',$0D,$0A,$00
 LAB_SMSG
 	dc.b	' Bytes free',$0D,$0A,$0A
-	dc.b	'Enhanced 68k BASIC Version 3.54',$0D,$0A,$00
+	dc.b	'GCC Enhanced 68k BASIC for Merlin V3.6 2021',$0D,$0A,$00
 
+
+.int1:
+	MOVEM D0-D7/A0-A6,-(SP)	; Preserve scratch registers
+	pea	.intend1	; A stub to restore the scratch registers
+	move.l	IntHandler1,-(a7)	; equivalent to move.l IntHandler1,reg; jmp reg - without using registers
+	rts
+
+.int2:
+	MOVEM D0-D7/A0-A6,-(SP)	; Preserve scratch registers
+	pea	.intend1
+	move.l	IntHandler2,-(a7)
+	rts
+
+.int3:
+	MOVEM D0-D7/A0-A6,-(SP); Preserve scratch registers
+	pea	.intend1
+	move.l	IntHandler3,-(a7)
+	rts
+
+.int4:
+	MOVEM D0-D7/A0-A6,-(SP)	; Preserve scratch registers
+	pea	.intend1
+	move.l	IntHandler4,-(a7)
+	rts
+
+.int5
+	MOVEM D0-D7/A0-A6,-(SP)	; Preserve scratch registers
+	pea	.intend1
+	move.l	IntHandler5,-(a7)
+	rts
+
+.int6
+	MOVEM D0-D7/A0-A6,-(SP)	; Preserve scratch registers
+	pea	.intend1
+	move.l	IntHandler6,-(a7)
+	rts
+
+.int7
+	MOVEM D0-D7/A0-A6,-(SP); Preserve scratch registers
+	pea	.intend1
+	move.l	IntHandler7,-(a7)
+	rts
+
+.intend1
+	movem.l	(a7)+,d0-d7/a0-a6
+	rte
+
+DummyIntHandler
+	rts
+
+EnableInterrupts ; FIXME - use a trap or suchlike to make this happen even if we're in user mode.
+	move.w	#$2000,SR
+	rts
+
+DisableInterrupts
+	move.w	#$2700,SR
+	rts
+
+; Interrupt handler table, modified by C code.
+IntHandler1	dc.l	DummyIntHandler
+IntHandler2 dc.l	DummyIntHandler
+IntHandler3 dc.l	DummyIntHandler
+IntHandler4 dc.l	DummyIntHandler
+IntHandler5 dc.l	DummyIntHandler
+IntHandler6 dc.l	DummyIntHandler
+IntHandler7 dc.l	DummyIntHandler
 
 *************************************************************************************
 * EhBASIC keywords quick reference list								*
@@ -9372,10 +9659,3 @@ LAB_SMSG
 * RIGHT$	. RIGHT$(<sexpr>,<nexpr>)					* done
 * MID$	. MID$(<sexpr>,<nexpr>[,<nexpr>])				* done
 * USING$	. USING$(<sexpr>,<nexpr>[,<nexpr>]...])			* done
-
-
-*************************************************************************************
-
-	END	code_start
-
-*************************************************************************************
