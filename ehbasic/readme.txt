@@ -1,9 +1,8 @@
-This is a port of Lee Davison's Enhanced Basic for 68000 to my TS2
-single board computer. 
+This is a port of Lee Davison's Enhanced Basic for 68000 to my Merlin FPGA
 
-It should be assembled using the VASM retargetable assembler. It can
-be loaded into RAM and started from address $0800 or built to run
-from EPROM at $C000.
+It should be assembled using the GCC assembler with MRI syntax. 
+
+It has extended support for FAT SD Cards. Load/Save/DIR commands work fully.
 
 The following notes may be useful when porting programs written for
 other Basic language dialects:
