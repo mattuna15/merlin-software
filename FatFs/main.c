@@ -10,26 +10,7 @@ extern unsigned char sort_table[MAXDIRENTRIES];
 extern unsigned char nDirEntries;
 extern unsigned char iSelectedEntry;
 
-void dump(unsigned char *buf)
-{
-	for (int i = 0; i < 512; i++)
-	{
-		if (i % 16 == 0)
-		{
-			printf(" ");
-			for (int j = 0; j < 16; j++)
-			{
-				if (buf[i - 16 + j] > 32 && buf[i - 16 + j] < 128)
-					printf("%c", buf[i - 16 + j]);
-				else
-					printf(" ");
-			}
-			printf("\r\n");
-		}
-		printf("%02x ", buf[i]);
-	}
-	printf("\r\n");
-}
+extern void dump(unsigned char *buf);
 
 ////////////////////////////////////////////////////////////////////
 
@@ -136,6 +117,6 @@ int main()
 	ScanDirectoryTest();
 	FileReadTest("NEW3    TXT");
 
-	print("done\r\n\r\n");
+	printf("done\r\n\r\n");
 
 }

@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include "../FatFs/ff.h"
 
-FRESULT loadFile();
-FRESULT saveFile();
-FRESULT deleteFile();
+BYTE loadFile(char *filename);
+int saveFile(char *filename, char *c);
+int deleteFile(char *filename);
 
 #endif

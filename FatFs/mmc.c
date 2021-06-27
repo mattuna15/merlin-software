@@ -130,7 +130,7 @@ void EnableReadCard(int multi)
 
     while (BIT_CHECK(status, SD_BUSY) == true)
     {
-        printf(":");
+       // printf(":");
         status = *sd_status >> 8;
     }
 
@@ -314,7 +314,6 @@ unsigned char MMC_Write(unsigned long lba, const unsigned char *pWriteBuffer)
         lba = lba << 9;            // otherwise convert sector adddress to byte address
 
     WORD status = *sd_status >> 8;
-    printf("\r\nAddress: %lu\r\n", lba);
 
     *sd_address = lba;
 
@@ -326,7 +325,6 @@ unsigned char MMC_Write(unsigned long lba, const unsigned char *pWriteBuffer)
         status = *sd_status >> 8;
     }
 
-    printf("\r\nEnabled\r\n");
     BIT_SET(*sd_control, SD_WRITE_EN);
     int wc = 512;
 
@@ -356,13 +354,13 @@ unsigned char MMC_Write(unsigned long lba, const unsigned char *pWriteBuffer)
         }
 
         BIT_CLEAR(*sd_control, SD_DIN_VALID);
-        printf(".");
+    //    printf(".");
 
         wc--;
     }
 
     // Finalize write process
-    printf("\r\nDisabled\r\n");
+   // printf("\r\nDisabled\r\n");
     BIT_CLEAR(*sd_control, SD_WRITE_EN);
 
     return 1;

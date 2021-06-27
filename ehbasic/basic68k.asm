@@ -46,27 +46,28 @@
 	XDEF IntHandler5
 	XDEF IntHandler6
 	XDEF IntHandler7
+	XDEF main
 
 		XREF PrintDirectory
 		XREF FindDrive
-		XREF f_open
-		XREF f_close
+		XREF loadFile
+		XREF saveFile
+		XREF deleteFile
 		XREF outbyte
 		XREF inbyte_noecho
 		XREF havebyte
-		XDEF main
-* Set the symbol FLASH_SUPPORT to 1 if you want to enable experimental
+
+* Set the symbol FAT_SUPPORT to 1 if you want to enable experimental
 * support for LOAD/SAVE using a Hobbytronics USB Flash Drive Host
 * Board.
 
 
 novar		EQU	0				* non existant variables cause errors
 
-* Set the symbol FLASH_SUPPORT to 1 if you want to enable experimental
-* support for LOAD/SAVE using a Hobbytronics USB Flash Drive Host
-* Board.
+* Set the symbol FAT_SUPPORT to 1 if you want to enable experimental
+* support for LOAD/SAVE 
 
-FLASH_SUPPORT   EQU     0
+FAT_SUPPORT   EQU     1
 
 *************************************************************************************
 
@@ -102,7 +103,7 @@ nobrk		EQU	0				* null response to INPUT causes a break
 
 *	OFFSET	0			* start of RAM
 
-ram_strt	ds.l	$1000		* allow 1K for the stack, this should be plenty
+ram_strt	ds.l	$2000		* allow 1K for the stack, this should be plenty
 					* for any BASIC program that doesn't do something
 					* silly, it could even be much less.
 ram_base
@@ -291,6 +292,8 @@ ccnull		ds.b	1		* CTRL-C last received byte 'life' timer
 
 file_byte	ds.b	1		* load/save data byte
 file_id		ds.l	1		* load/save file ID
+load_first      ds.b    1               * Boolean indicating if first byte read
+load_filename   ds.b    13              * Hold LOAD/SAVE filename (DOS 8.3 format plus terminating null)
 
 		dc.w	0		* dummy even value and zero pad byte
 
@@ -355,57 +358,40 @@ RXNOTREADY
 
 * Input routine used in LOAD mode to read file from USB flash storage.
 
- ifne   FLASH_SUPPORT
+	ifne   FAT_SUPPORT
+
+VEC_OUT2
+		 MOVEM.L  A0-A2/D1-D7,-(A7)    * Save working registers
+
+        move.b d0,file_byte(A3)
+		MOVE.b d0,d1
+		* load one byte to SD Card
+		pea file_byte(A3)
+		pea load_filename(A3)
+        jsr saveFile
+		addq #8,SP
+
+        MOVEM.L  (A7)+,A0-A2/D1-D7    * Restore working registers
+        RTS	
 
 VEC_IN2
         MOVEM.L  A0/D1,-(A7)    * Save working registers
-        LEA.L    VEC_OUT2,A0    * Redirect output to aux. port.
-        MOVE.L   A0,V_OUTPv(a3)
 
 * The first time, send READ <filename> 1 1
 * Subsequent times, send READ <filename> n 1
 
-        LEA      LAB_READN(pc),A0 * Send READ command string
-        BSR      PRINTSTRING2   * Print null terminated string
-
         LEA      load_filename(A3),A0 * Send filename string
-        BSR      PRINTSTRING2   * Print null terminated string
 
-        MOVE.B   #' ',D0       * Send space
-        JSR      VEC_OUT2
+* Read one byte from SD Card
 
-        CMP.B    #1,load_first(A3) * First time?
-        BNE      NOTFIRST1
-        MOVE.B   #'1',D0        * Send '1'
-        CLR.B    load_first(A3) * Clear first flag
-        BRA      SENDCMD1
-NOTFIRST1
-        MOVE.B   #'n',D0        * Send 'n'
-SENDCMD1
-        JSR      VEC_OUT2
-        MOVE.B   #' ',D0        * Send space
-        JSR      VEC_OUT2
-        MOVE.B   #'1',D0        * Send '1'
-        JSR      VEC_OUT2
-        MOVE.B   #$0D,D0        * Send <Return>
-        JSR      VEC_OUT2
-
-        LEA.L    VEC_OUT,A0     * Redirect output back to console port.
-        MOVE.L   A0,V_OUTPv(a3)
-
-* Read one byte from USB host
-
-        LEA.L    ACIA_2,A0      * A0 points to console ACIA
-RXNOTREADY2
-        MOVE.B   (A0),D1        * Read ACIA status
-        BTST     #0,D1          * Test RDRF bit
-        BEQ.S    RXNOTREADY2    * Branch if ACIA Rx not ready
-        MOVE.B   2(A0),D0       * Read character received
+		pea load_filename(A3)
+        jsr loadFile
+		addq #4,SP
 
 * Check for end of file character ('~') and if found, redirect
 * input back to console port.
 
-        CMP.B    #'~',D0        * End of file marker?
+        CMP.B    #'~',D0        * End of file marker? null
         BNE      NOTEOF
         MOVE.B   #$0D,D0        * Convert '~' to a Return
         LEA.L    VEC_IN,A0      * Redirect input back to console port.
@@ -417,11 +403,24 @@ NOTEOF
 
  endc
 
+ * Output null terminated string pointed to by A0 to first serial port.
+
+PRINTSTRING1
+        MOVEM.L  A0/D0,-(A7)    * Save working registers
+LP1     CMP.B    #0,(A0)        * Is it null?
+        BEQ      RET1           * If so, return
+        MOVE.B   (A0)+,D0       * Get character and advance pointer
+        JSR      VEC_OUT        * Output it
+        BRA      LP1            * Continue for rest of string
+
+RET1    MOVEM.L  (A7)+,A0/D0    * Restore working registers
+        RTS                     * Return
+
 *************************************************************************************
 *
 * LOAD routine for the TS2 computer (not implemented)
 
- ifeq   FLASH_SUPPORT
+ ifeq   FAT_SUPPORT
 
 VEC_LD
        MOVEQ           #$2E,d7                         * error code $2E "Not implemented" error
@@ -432,7 +431,7 @@ VEC_LD
 * LOAD routine for the TS2 computer. Supports a Hobbytronics USB Flash
 * Drive Host Board connected to the auxiliary serial port.
 
- ifne   FLASH_SUPPORT
+ ifne   FAT_SUPPORT
 
 VEC_LD  LEA             LAB_FILENAME(PC),A0             * Prompt for filename.
         BSR             PRINTSTRING1                    * Print null terminated string
@@ -468,13 +467,13 @@ ENDLN1  MOVE.B          #0,load_filename(A2)            * Add terminating null t
 *
 * SAVE routine for the TS2 computer (not implemented)
 
- ifeq   FLASH_SUPPORT
+ ifeq   FAT_SUPPORT
 VEC_SV
        MOVEQ           #$2E,d7                         * error code $2E "Not implemented" error
        BRA             LAB_XERR                        * do error #d7, then warm start
  endc
 
- ifne   FLASH_SUPPORT
+ ifne   FAT_SUPPORT
 
 * SAVE routine for the TS2 computer. Supports a Hobbytronics USB Flash
 * Drive Host Board connected to the auxiliary serial port.
@@ -504,28 +503,13 @@ ENDLN   MOVE.B          #0,load_filename(A2)            * Add terminating null t
         LEA.L           VEC_OUT2,A0                     * Redirect output to aux. port.
         MOVE.L          A0,V_OUTPv(a3)
 
-        LEA             LAB_WRITE(pc),A0                * Send WRITE command string
-        BSR             PRINTSTRING2                    * Print null terminated string
-
-        LEA             load_filename(A3),A0            * Send filename string
-        BSR             PRINTSTRING2                    * Print null terminated string
-
-        MOVE.B          #$0D,D0                         * Send <Return>
-        JSR             VEC_OUT2
-
-        MOVE.l          #356000,d0                      * Delay approx. 1 second to allow USB to create file
-DELAY   SUBQ.l          #1,d0
-        BNE             DELAY
 
         MOVEQ           #0,d0                           * Tells LIST no arguments
         ANDI.b          #$FE,CCR                        * Clear carry
         BSR             LAB_LIST                        * Call LIST routine
 
         MOVEQ           #'~',d0                         * Send tilde symbol indicate end of file (used when loading)
-        BSR             LAB_PRNA
-
-        MOVEQ           #26,d0                          * Send Control-Z to indicate end of file save operation
-        BSR             LAB_PRNA
+        BSR				LAB_PRNA
 
         LEA.L           VEC_OUT,A0                      * Redirect output back to console port.
         MOVE.L          A0,V_OUTPv(a3)
@@ -1447,6 +1431,7 @@ LAB_14C0
 LAB_14D4
 	MOVE.b	#$00,Oquote(a3)		* clear open quote flag
 	BSR		LAB_CRLF			* print CR/LF
+
 	MOVE.l	(a0)+,d0			* get next line pointer
 	BEQ.s		RTS_005			* if null all done so exit
 
@@ -8214,7 +8199,8 @@ RTS_025
 *
 * token values needed for BASIC
 
-TK_END		EQU $80			* $80
+TK_DIR		EQU $80		* $e5
+TK_END		EQU TK_DIR+1			* $80
 TK_FOR		EQU TK_END+1		* $81
 TK_NEXT		EQU TK_FOR+1		* $82
 TK_DATA		EQU TK_NEXT+1		* $83
@@ -8254,8 +8240,7 @@ TK_GET		EQU TK_WIDTH+1		* $A4
 TK_SWAP		EQU TK_GET+1		* $A5
 TK_BITSET		EQU TK_SWAP+1		* $A6
 TK_BITCLR		EQU TK_BITSET+1		* $A7
-TK_DIR		EQU TK_BITCLR+1		* $e5
-TK_TAB		EQU TK_DIR+1		* $A8
+TK_TAB		EQU TK_BITCLR+1		* $A8
 TK_ELSE		EQU TK_TAB+1		* $A9
 TK_TO			EQU TK_ELSE+1		* $AA
 TK_FN			EQU TK_TO+1			* $AB
@@ -8316,6 +8301,7 @@ TK_LEFTS		EQU TK_SADD+1		* $E1
 TK_RIGHTS		EQU TK_LEFTS+1		* $E2
 TK_MIDS		EQU TK_RIGHTS+1		* $E3
 TK_USINGS		EQU TK_MIDS+1		* $E4
+
 
 
 
@@ -8621,6 +8607,7 @@ KFCTSEED	equ	$26A3D110		* $26A3D110
 * command vector table
 
 LAB_CTBL
+	dc.w	LAB_DIR-LAB_CTBL			* DIr
 	dc.w	LAB_END-LAB_CTBL			* END
 	dc.w	LAB_FOR-LAB_CTBL			* FOR
 	dc.w	LAB_NEXT-LAB_CTBL			* NEXT
@@ -8661,7 +8648,6 @@ LAB_CTBL
 	dc.w	LAB_SWAP-LAB_CTBL			* SWAP
 	dc.w	LAB_BITSET-LAB_CTBL		* BITSET
 	dc.w	LAB_BITCLR-LAB_CTBL		* BITCLR
-	dc.w	LAB_DIR-LAB_CTBL			* DIr
 
 
 *************************************************************************************
@@ -8874,6 +8860,8 @@ TAB_CHRT
 * [word]offset from table start
 
 LAB_KEYT
+	dc.b	'D',1
+	dc.w	KEY_DIR-TAB_STAR			* DIM
 	dc.b	'E',1
 	dc.w	KEY_END-TAB_STAR			* END
 	dc.b	'F',1
@@ -8974,8 +8962,6 @@ LAB_KEYT
 	dc.w	KEY_UNTIL-TAB_STAR		* UNTIL
 	dc.b	'W',3
 	dc.w	KEY_WHILE-TAB_STAR		* WHILE
-	dc.b	'D',1
-	dc.w	KEY_DIR-TAB_STAR			* DIM
 
 	dc.b	'+',-1
 	dc.w	KEY_PLUS-TAB_STAR			* +
