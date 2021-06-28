@@ -17,7 +17,7 @@
 #include "asm.h"
 
 	.title "crt0.S for m68k-coff"
-#define STACKSIZE	0x4000
+#define STACKSIZE	0xE000
 
 /*
  * Define an empty environment.

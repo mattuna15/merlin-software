@@ -2,11 +2,11 @@ STARTUP(crt0.o)
 OUTPUT_ARCH(m68k)
 /* Uncomment this if you want srecords. This is needed for a.out
  * if you plan to use GDB.
- */
+*/
 OUTPUT_FORMAT(srec)
 
 SEARCH_DIR(.)
-GROUP(-lts2 -lc -lgcc)
+GROUP(-lts2 -lc -lgcc )
 __DYNAMIC  =  0;
 
 /*
@@ -36,9 +36,8 @@ __DYNAMIC  =  0;
 
 MEMORY
 {
-  ram (rwx) : ORIGIN = 0x0800, LENGTH = 32K-2K
-  rom0            : ORIGIN = 0x008000, LENGTH = 16K
-  rom1            : ORIGIN = 0x00C000, LENGTH = 16K
+  ram (rwx) : ORIGIN = 0x0400, LENGTH = 14680064K-2k
+  rom : ORIGIN = 0x00E00000, LENGTH = 1M
 }
 
 /*
@@ -46,7 +45,7 @@ MEMORY
  * grows down
  */
 
-PROVIDE (__stack = 32K - 8);
+PROVIDE (__stack = 0xDFFFFe);
 
 /*
  * Initalize some symbols to be zero so we can reference them in the
