@@ -49,11 +49,12 @@ void gd_swap() {
 void gd_line(uint32_t * x1, uint32_t * y1, uint32_t * x2, uint32_t * y2, uint32_t * size, 
                     uint32_t * color, uint32_t *begin ) {
 
-    
+    int pointSize = 16 * *size;
+
     if (*begin == 1)
         GD.Begin(LINES);
 
-    GD.PointSize(16 * *size);
+    GD.PointSize(pointSize);
     GD.ColorRGB(*color);
     GD.VertexFormat(0);
 
@@ -74,8 +75,7 @@ void gd_text(uint32_t * x, uint32_t * y, uint32_t * justify, const char *text, u
 }
 
 void gd_plot(uint32_t *x, uint32_t *y, uint32_t *color, uint32_t *size, uint32_t *begin) {
-    
-    printf("\r\nplot: ");
+
     int pointSize = 16 * *size;
     
     if (*begin == 1)
@@ -86,6 +86,5 @@ void gd_plot(uint32_t *x, uint32_t *y, uint32_t *color, uint32_t *size, uint32_t
     GD.VertexFormat(0);
 
     GD.Vertex2f(*x, *y);
-
 
 }

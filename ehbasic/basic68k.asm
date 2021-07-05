@@ -3237,17 +3237,32 @@ LAB_SFCO
 * perform LINE [[X1,Y1],X2,Y2][,][LINE_COLOUR]
 
 LAB_LINE
-	MOVEQ		#85,d0			* default to draw line to X1,Y1
-	MOVE.l	d0,-(sp)			* set line type
-
+	
 	BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
-	BTST		#0,d1				* test parameter count
-	BEQ		LAB_LNCO			* branch if no line colour parameter
 
-	MOVE.l	(sp)+,d0			* get line colour
-	BSR		LAB_SLCO			* go mask & set line colour
-	SUBQ.w	#1,d1				* decrement parameter count
-	BEQ		LAB_SRTS			* exit if all done
+	SUBQ.w	#7,d1				* subtract 2 from parameter count
+	BNE		LAB_SNER			* do error if there were other than two
+								* parameters left
+	move.l  (sp)+,gdflag(a3)
+	MOVE.l	(sp)+,lineSize(a3)
+	move.l  (sp)+,lineColor(a3)
+	move.l  (sp)+,y2(a3)
+	move.l  (sp)+,x2(a3)  
+	move.l  (sp)+,y1(a3)
+	move.l  (sp)+,x1(a3)  
+	
+	pea gdflag(a3)
+	pea lineSize(a3)
+	pea lineColor(a3)
+	pea y2(a3)
+	pea x2(a3)
+	pea y1(a3)
+	pea x1(a3)
+
+	jsr gd_line
+	add #28,sp
+
+	rts
 
 							* parameter count is always even here
 LAB_LNCO
