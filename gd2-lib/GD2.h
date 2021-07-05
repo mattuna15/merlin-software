@@ -34,7 +34,7 @@
 #define BOARD BOARD_GAMEDUINO23 // board, from above
 #endif
 
-#define STORAGE 1     // Want SD storage?
+#define STORAGE 0     // Want SD storage?
 #define CALIBRATION 0 // Want touchscreen calibration?
 
 #define byte uint8_t
@@ -102,7 +102,7 @@ public:
   {
     byte r = 0;
 
-    // printf("s:%0X ", x);
+    printf("\r\ns:%0X ", x);
 
     while (!BIT_CHECK(*spi_ctl, READY))
     {
@@ -118,7 +118,7 @@ public:
     }
 
     r = *spi_data_out;
-    // printf("r:%0X\r\n", r);
+    printf("r:%0X\r\n", r);
 
     return r;
   }

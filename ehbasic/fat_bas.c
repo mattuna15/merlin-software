@@ -59,7 +59,7 @@ int saveFile(char *filename, char *c)
     {
         f_close(&file);
         fileopen = 0;
-        printf("%d bytes saved.\r\n", f_size(&file));
+        printf("\r\n%d bytes saved.\r\n", f_size(&file));
     }
 
     return *c;
