@@ -751,11 +751,11 @@ uint16_t GDClass::random() {
   return rseed;
 }
 
-uint16_t GDClass::random(uint16_t n) {
+uint32_t GDClass::random(uint32_t n) {
   uint16_t p = random();
   if (n == (n & -n))
     return p & (n - 1);
-  return (uint32_t(p) * n) >> 16;
+  return (uint32_t(p) * n);
 }
 
 uint16_t GDClass::random(uint16_t n0, uint16_t n1) {

@@ -209,7 +209,7 @@ public:
   void begin(uint8_t options = (GD_CALIBRATE | GD_TRIM | GD_STORAGE), int cs = 0, int sdcs = 0);
 
   uint16_t random();
-  uint16_t random(uint16_t n);
+  uint32_t random(uint32_t n);
   uint16_t random(uint16_t n0, uint16_t n1);
   void seed(uint16_t n);
   int16_t rsin(int16_t r, uint16_t th);

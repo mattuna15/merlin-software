@@ -674,7 +674,7 @@ LAB_sizok
 
 	LEA		LAB_1274(pc),a0		* get warm start vector
 	MOVE.l	a0,Wrmjpv(a3)		* set warm start vector
-	BSR		LAB_RND			* initialise
+	*BSR		LAB_RND			* initialise
 	JMP		LAB_WARM(a3)		* go do warm start
 
 
@@ -7157,6 +7157,11 @@ Ninc1
 	DBF		d2,Ninc0			* loop
 
 	MOVE.l	d0,PRNlword(a3)		* save back to seed word
+
+	pea PRNlword(a3)
+	jsr gd_rand
+	addq #4,sp
+
 	MOVE.l	d0,FAC1_m(a3)		* copy to FAC1 mantissa
 	MOVE.w	#$8000,FAC1_e(a3)		* set the exponent and clear the sign
 	BRA		LAB_24D5			* normalise FAC1 & return

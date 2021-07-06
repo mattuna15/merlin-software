@@ -45,6 +45,9 @@ void gd_swap() {
     GD.swap();  
 }
 
+uint32_t gd_rand(uint32_t *seed) {
+    return GD.random(*seed);
+}
 
 void gd_line(uint32_t * x1, uint32_t * y1, uint32_t * x2, uint32_t * y2, uint32_t * size, 
                     uint32_t * color, uint32_t *begin ) {
