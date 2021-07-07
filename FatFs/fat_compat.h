@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-#define MAXDIRENTRIES 8
+#define MAXDIRENTRIES 15
 #define SECTOR_BUFFER_SIZE 2352
 
 struct PartitionEntry

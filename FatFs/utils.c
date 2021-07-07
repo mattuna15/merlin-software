@@ -15,6 +15,23 @@ extern unsigned char sort_table[MAXDIRENTRIES];
 extern unsigned char nDirEntries;
 extern unsigned char iSelectedEntry;
 
+char * dateTimeStamp(FILINFO file) {
+
+	char *time;
+
+	int year = 1980 + (file.fdate >> 9);
+	int month = (file.fdate >> 5) & 0xf;
+	int day = file.fdate & 0x1f;
+
+	int hour = file.ftime >> 11;
+	int min = (file.ftime >> 5) & 0x2f;
+	int sec = file.fdate & 0x1f;
+
+	sprintf(time,"%02d/%02d/%04d %02d:%02d:%02d", day, month, year,hour, min, sec);
+
+	return time;
+}
+
 
 
 void PrintDirectory()
@@ -33,8 +50,7 @@ void PrintDirectory()
 		for (i = 0; i < nDirEntries; i++)
 		{
 			k = sort_table[i];
-			printf("%c %s %lu", i == iSelectedEntry ? '*' : ' ', DirEntries[k].fname, DirEntries[k].fsize);
-			printf("\r\n");
+			printf("%c %s\t%s\t%lu bytes\r\n", i == iSelectedEntry ? '*' : ' ', DirEntries[k].fname, dateTimeStamp(DirEntries[k]), DirEntries[k].fsize);
 		}
 		lastStartCluster = DirEntries[0].fclust;
 		if (nDirEntries == 8)

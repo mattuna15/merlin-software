@@ -205,13 +205,3 @@ DRESULT disk_ioctl (
 
 	return RES_PARERR;
 }
-
-DWORD get_fattime()
-{
-	uint8_t date[7]; //year,month,date,hour,min,sec,day
-
-	
-
-
-	return 0;
-}
