@@ -488,6 +488,37 @@ ENDLN1  MOVE.B          #0,load_filename(A2)            * Add terminating null t
 
         RTS
 
+
+LAB_DEL 
+		MOVEM.L  A0-A2/D1-D7,-(A7)    * Save working registers
+		LEA             LAB_FILENAME(PC),A0             * Prompt for filename.
+        BSR             PRINTSTRING1                    * Print null terminated string
+        MOVE.L          A3,A2                           * Save pointer to RAM variables
+GETFND  JSR             VEC_IN                          * Get character
+        BCC             GETFND                          * Go back if carry clear, indicating no key pressed
+        JSR             VEC_OUT                         * Echo the character
+        CMP.B           #$0D,D0                         * Was it <Return>?
+        BEQ             ENDLND                          * If so, branch
+        CMP.B           #$7F,D0                         * Was it <Delete>?
+        BEQ             DELETED                         * If so, handle delete
+        CMP.B           #$08,D0                         * Was it <Backspace?
+        BEQ             DELETED                         * If so, handle as delete
+        MOVE.B          D0,load_filename(A2)            * Save in buffer
+        ADDQ.L          #1,A2                           * Advance string pointer
+        BRA             GETFND                          * Go back and get next character
+DELETED SUBQ.L          #1,A2                           * Delete last character entered
+        BRA             GETFND                          * Go back and get next character
+
+ENDLND  MOVE.B          #0,load_filename(A2)            * Add terminating null to filename
+        
+		PEA				load_filename(A3) 
+		JSR				deleteFile
+		ADDQ			#4,sp
+* Input routine will detect end of file and redirect input back to
+* console port.
+		MOVEM.L  (A7)+,A0-A2/D1-D7    * Restore working registers
+        RTS
+
  endc
 
 *************************************************************************************
@@ -3921,7 +3952,7 @@ LAB_1CFE
 
 LAB_DIM
 	MOVEQ		#-1,d1			* set "DIM" flag
-	BSR.s		LAB_1D10			* search for or dimension a variable
+	BSR		LAB_1D10			* search for or dimension a variable
 	BSR		LAB_GBYT			* scan memory
 	BNE.s		LAB_1CFE			* loop and scan for "," if not null
 
@@ -3932,7 +3963,11 @@ LAB_DIM
 
 LAB_DIR
 
+	MOVEM.L  A0-A2/D0-D7,-(A7)    * Save working registers
+
 	jsr PrintDirectory
+
+	MOVEM.L  (A7)+,A0-A2/D0-D7    * Restore working registers
 
 	rts
 
@@ -8698,7 +8733,8 @@ RTS_025
 * token values needed for BASIC
 
 TK_DIR		EQU $80		* $e5
-TK_END		EQU TK_DIR+1			* $80
+TK_DEL		EQU TK_DIR+1
+TK_END		EQU TK_DEL+1			* $80
 TK_FOR		EQU TK_END+1		* $81
 TK_NEXT		EQU TK_FOR+1		* $82
 TK_DATA		EQU TK_NEXT+1		* $83
@@ -9123,6 +9159,7 @@ KFCTSEED	equ	$26A3D110		* $26A3D110
 
 LAB_CTBL
 	dc.w	LAB_DIR-LAB_CTBL			* DIr
+	dc.w	LAB_DEL-LAB_CTBL			* Del
 	dc.w	LAB_END-LAB_CTBL			* END
 	dc.w	LAB_FOR-LAB_CTBL			* FOR
 	dc.w	LAB_NEXT-LAB_CTBL			* NEXT
@@ -9394,7 +9431,9 @@ TAB_CHRT
 
 LAB_KEYT
 	dc.b	'D',1
-	dc.w	KEY_DIR-TAB_STAR			* DIM
+	dc.w	KEY_DIR-TAB_STAR			* DIR
+	dc.b	'D',1
+	dc.w	KEY_DEL-TAB_STAR			* DEL
 	dc.b	'E',1
 	dc.w	KEY_END-TAB_STAR			* END
 	dc.b	'F',1
@@ -9775,6 +9814,8 @@ KEY_DEEK
 	dc.b	'EEK(',TK_DEEK			* DEEK(
 KEY_DEF
 	dc.b	'EF',TK_DEF				* DEF
+KEY_DEL
+	dc.b	'EL',TK_DEL				* DEL
 KEY_DIM
 	dc.b	'IM',TK_DIM				* DIM
 KEY_DIR

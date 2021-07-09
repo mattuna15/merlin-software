@@ -68,5 +68,13 @@ int saveFile(char *filename, char *c)
 int deleteFile(char *filename)
 {
 
-    return f_unlink(filename);
+    printf("\r\nDeleting: %s ...\r\n", filename);
+    FRESULT res =   f_unlink(filename);
+
+    if (res == FR_OK) 
+        printf("Deleted.\r\n");
+    else
+        printf("Error - %d\r\n",res);
+
+    return res;
 }
