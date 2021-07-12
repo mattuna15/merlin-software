@@ -319,9 +319,9 @@ width  ds.l 1
 fillColor ds.l 1
 lineColor ds.l 1
 lineSize ds.l 1
-
 bitmapHandle ds.l 1
-gfxText		ds.b 256
+gfxText		ds.l 1
+gfxTextLen	ds.W 1
 
 		dc.w	0		* dummy even value and zero pad byte
 
@@ -2310,7 +2310,34 @@ LAB_NoSt
 
 *************************************************************************************
 *
-* PRINT
+* PRINT -> gd
+* void gd_text(uint32_t * x, uint32_t * y, uint32_t * font, uint32_t *color, const char *text) 
+
+LAB_GDPRINT
+
+	MOVEM.L  A0-A2/D0-D7,-(A7)    * Save working registers
+
+	BSR		LAB_EVEX			* evaluate expression
+	BSR		LAB_GBYT			* scan memory
+	BNE		LAB_SNER			* if not [EOL] or [EOS] do syntax error and
+						* warm start
+
+	MOVE.l	(a4)+,gfxText(a3)			* string address from descriptor stack
+	MOVE.w	(a4)+,gfxTextLen(a3)			* string length from descriptor stack
+
+	pea gfxTextLen(a3)
+	pea gfxText(a3)
+	pea lineColor(a3)
+	pea lineSize(a3)
+	pea y1(a3)
+	pea x1(a3)
+	jsr gd_text
+	add #24,sp
+
+	MOVEM.L  (A7)+,A0-A2/D0-D7    * Restore working registers
+
+	rts
+
 
 LAB_1829
 	BSR		LAB_18C6			* print string from stack
@@ -2318,6 +2345,7 @@ LAB_182C
 	BSR		LAB_GBYT			* scan memory
 
 * perform PRINT
+
 
 LAB_PRINT
 	BEQ.s		LAB_CRLF			* if nothing following just print CR/LF
@@ -3515,10 +3543,14 @@ LAB_MODE
 * perform SIZE s
 
 LAB_SIZE
-	BSR		LAB_GTBY			* get byte parameter, result in d0 and Itemp
-	MOVE.l	d0,d1				* copy it
-	MOVEQ		#93,d0			* set pen width
-	TRAP		#15				* do I/O function
+	BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
+
+	SUBQ.w	#1,d1			
+	BNE		LAB_SNER			* do error if there were other than two
+							* parameters left
+
+	move.L	(sp)+,lineSize(a3)
+
 	RTS
 
 
@@ -3527,49 +3559,13 @@ LAB_SIZE
 * perform CURSOR X,Y
 
 LAB_CURSOR
-	BSR		LAB_GTBY			* get byte parameter, result in d0 and Itemp
-	CMP.b		#80,d0			* compare with max+1
-	BCC		LAB_FCER			* if >= 80 go do function call error
+	BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
 
-	MOVE.b	d0,TPos(a3)			* set terminal position
-	ASL.w		#8,d0				* shift to high byte of word
-	MOVE.w	d0,-(sp)			* save d0
+	SUBQ.w	#2,d1			
+	BNE		LAB_SNER			
 
-	BSR		LAB_SCGB			* scan for "," and get byte parameter, result
-							* in d0 & Itemp
-
-	CMP.b		#32,d0			* compare with max+1
-	BCC		LAB_FCER			* if >= 32 go do function call error
-
-	MOVE.w	(sp)+,d1			* restore d1
-	OR.w		d0,d1				* OR row into low byte
-
-	MOVEQ		#11,d0			* cursor position
-	TRAP		#15				* do I/O function
-
-	MOVEQ		#0,d0				* set d0
-	ADD.b		TPos(a3),d0			* get cursor x position
-	TST.b		TWidth(a3)			* test terminal width
-	BNE.s		LAB_CRTS			* branch if not infinite line
-
-LAB_CDLP
-	SUB.b		TabSiz(a3),d0		* subtract tab size
-	BCC.s		LAB_CDLP			* loop while no borrow
-	ADD.b		TabSiz(a3),d0		* add tab size back
-LAB_CRTS
-	MOVE.b	d0,TPos(a3)			* set terminal position
-	RTS
-
-
-*************************************************************************************
-*
-* perform BUFFER
-
-LAB_BUFFER
-	BNE		LAB_SNER			* do syntax error if following byte
-
-	MOVEQ		#94,d0			* copy buffer to screen
-	TRAP		#15				* do I/O function
+	move.L	(sp)+,y1(a3)
+	move.L	(sp)+,x1(a3)
 
 	RTS
 
@@ -3592,6 +3588,38 @@ LAB_GDSWAP
 ****************
 *
 LAB_CLS
+	
+	BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
+
+	SUBQ.w	#1,d1				* subtract 2 from parameter count
+	BNE		LAB_SNER			* do error if there were other than two
+							* parameters left
+	
+	MOVE.l	(sp)+,fillColor(a3)
+	
+	pea fillColor(a3)			* clear fill colour
+	jsr gd_clearColor
+	addq #4,SP
+
+	RTS
+
+LAB_LINEC
+	
+	BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
+
+	SUBQ.w	#1,d1				* subtract 2 from parameter count
+	BNE		LAB_SNER			* do error if there were other than two
+							* parameters left
+	
+	MOVE.l	(sp)+,lineColor(a3)
+	
+	pea fillColor(a3)			* clear fill colour
+	jsr gd_clearColor
+	addq #4,SP
+
+	RTS
+
+LAB_FILLC
 	
 	BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
 
@@ -8767,8 +8795,7 @@ TK_LOOP		EQU TK_DO+1			* $9D
 TK_PRINT		EQU TK_LOOP+1		* $9E
 TK_CONT		EQU TK_PRINT+1		* $9F
 
-TK_BUFFER		EQU TK_CONT+1		* $A0 EASy68k graphics extension
-TK_CLS		EQU TK_BUFFER+1		* $A1 EASy68k graphics extension
+TK_CLS		EQU TK_CONT+1		* $A1 EASy68k graphics extension
 TK_CURSOR		EQU TK_CLS+1		* $A2 EASy68k graphics extension
 TK_LINE		EQU TK_CURSOR+1		* $A3 EASy68k graphics extension
 TK_FILL		EQU TK_LINE+1		* $A4 EASy68k graphics extension
@@ -8782,8 +8809,9 @@ TK_MODE		EQU TK_FELLIPSE+1		* $AB EASy68k graphics extension
 TK_SIZE		EQU TK_MODE+1		* $AC EASy68k graphics extension
 TK_CLR		EQU TK_SIZE+1
 TK_GDSWAP	EQU TK_CLR+1
+TK_GDPRINT	EQU TK_GDSWAP+1
 
-TK_LIST		EQU TK_GDSWAP+1		* $A0
+TK_LIST		EQU TK_GDPRINT+1		* $A0
 TK_CLEAR		EQU TK_LIST+1		* $A1
 TK_NEW		EQU TK_CLEAR+1		* $A2
 TK_WIDTH		EQU TK_NEW+1		* $A3
@@ -9194,7 +9222,6 @@ LAB_CTBL
 	dc.w	LAB_CONT-LAB_CTBL			* CONT
 
 * GFX
-	dc.w	LAB_BUFFER-LAB_CTBL		* BUFFER
 	dc.w	LAB_CLS-LAB_CTBL			* CLS
 	dc.w	LAB_CURSOR-LAB_CTBL		* CURSOR
 	dc.w	LAB_LINE-LAB_CTBL			* LINE
@@ -9209,6 +9236,7 @@ LAB_CTBL
 	dc.w	LAB_SIZE-LAB_CTBL			* SIZE
 	dc.w 	LAB_CLR-LAB_CTBL
 	dc.w 	LAB_GDSWAP-LAB_CTBL
+	dc.w 	LAB_GDPRINT-LAB_CTBL
 
 	dc.w	LAB_LIST-LAB_CTBL			* LIST
 	dc.w	LAB_CLEAR-LAB_CTBL		* CLEAR
@@ -9499,8 +9527,6 @@ LAB_KEYT
 	dc.b	'C',2
 	dc.w	KEY_CONT-TAB_STAR			* CONT
 
-	dc.b	'B',4
-	dc.w	KEY_BUFFER-TAB_STAR		* BUFFER
 	dc.b	'C',1
 	dc.w	KEY_CLS-TAB_STAR			* CLS
 	dc.b	'C',4
@@ -9529,6 +9555,8 @@ LAB_KEYT
 	dc.w 	KEY_CLR-TAB_STAR
 	dc.b	'G',4
 	dc.w 	KEY_GDSWAP-TAB_STAR
+	dc.b	'G',5
+	dc.w 	KEY_GDPRINT-TAB_STAR
 
 	dc.b	'L',2
 	dc.w	KEY_LIST-TAB_STAR			* LIST
@@ -9784,8 +9812,6 @@ KEY_BITSET
 	dc.b	'ITSET',TK_BITSET			* BITSET
 KEY_BITTST
 	dc.b	'ITTST(',TK_BITTST		* BITTST(
-KEY_BUFFER
-	dc.b	'UFFER',TK_BUFFER			* BUFFER
 	dc.b	$00
 TAB_ASCC
 KEY_CALL
@@ -9852,6 +9878,8 @@ KEY_FRE
 TAB_ASCG
 KEY_GDSWAP
 	dc.b	'DSWAP',TK_GDSWAP				* CLS
+KEY_GDPRINT
+	dc.b	'DPRINT',TK_GDPRINT				* CLS
 KEY_GET
 	dc.b	'ET',TK_GET				* GET
 KEY_GOTO
