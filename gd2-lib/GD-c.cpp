@@ -57,12 +57,12 @@ void gd_line(uint32_t *x1, uint32_t *y1, uint32_t *x2, uint32_t *y2, uint32_t *s
              uint32_t *color, uint32_t *begin)
 {
 
-    int pointSize = 16 * *size;
+    int lineWidth = 16 * *size;
 
     if (*begin == 1)
         GD.Begin(LINES);
 
-    GD.PointSize(pointSize);
+    GD.LineWidth(lineWidth);
     GD.ColorRGB(*color);
     GD.VertexFormat(0);
 

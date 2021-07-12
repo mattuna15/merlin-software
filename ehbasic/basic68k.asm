@@ -3179,29 +3179,6 @@ RTS_001						* carry set if byte = "0"-"9"
 
 
 *************************************************************************************
-* EASy68k graphics extension function								*
-*************************************************************************************
-*
-* perform POINT(X,Y) function
-
-LAB_FPOINT
-	MOVE.b	(a5)+,d0			* increment BASIC execute pointer
-							* fastest/shortest method
-	MOVEQ		#$28,d0			* load d0 with "("
-	BSR		LAB_SCCA			* scan for "(", else do syntax error/warm start
-	BSR.s		LAB_GTSW			* get X co-ordinate
-	MOVE.l	d0,-(sp)			* save X co-ordinate
-	BSR		LAB_1C01			* scan for "," else do syntax error/warm start
-	BSR.s		LAB_GTSW			* get Y co-ordinate
-	MOVE.l	d0,-(sp)			* save Y co-ordinate
-	BSR		LAB_1BFB			* scan for ")", else do syntax error/warm start
-	MOVE.l	(sp)+,d2			* restore Y co-ordinate
-	MOVE.l	(sp)+,d1			* restore X co-ordinate
-	MOVEQ		#83,d0			* read pixel colour
-	TRAP		#15				* do I/O function
-	BRA		LAB_AYFC			* convert d0 to signed longword in FAC1 & RET
-
-*************************************************************************************
 * EASy68k graphics extension commands								*
 *************************************************************************************
 
@@ -3265,54 +3242,24 @@ LAB_GGEX
 
 *************************************************************************************
 *
-* set line colour d0
-
-LAB_SLCO
-	MOVE.w	d1,-(sp)			* save parameter count
-	MOVE.l	#$FFFFFF,d1			* set mask
-	AND.l		d0,d1				* and line colour
-	MOVEQ		#80,d0			* set pen colour
-	TRAP		#15				* do I/O function
-	MOVE.w	(sp)+,d1			* get parameter count back
-	RTS
-
-
-*************************************************************************************
-*
-* set fill colour d0
-
-LAB_SFCO
-	MOVE.w	d1,-(sp)			* save parameter count
-	MOVE.l	#$FFFFFF,d1			* set mask
-	AND.l		d0,d1				* and line colour
-	MOVEQ		#81,d0			* set pen colour
-	TRAP		#15				* do I/O function
-	MOVE.w	(sp)+,d1			* get parameter count back
-	RTS
-
-
-*************************************************************************************
-*
 * perform LINE [[X1,Y1],X2,Y2][,][LINE_COLOUR]
 
 LAB_LINE
 	
 	BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
 
-	SUBQ.w	#7,d1				* subtract 2 from parameter count
+	SUBQ.w	#5,d1				* subtract 2 from parameter count
 	BNE		LAB_SNER			* do error if there were other than two
 								* parameters left
 	move.l  (sp)+,gdflag(a3)
-	MOVE.l	(sp)+,lineSize(a3)
-	move.l  (sp)+,lineColor(a3)
 	move.l  (sp)+,y2(a3)
 	move.l  (sp)+,x2(a3)  
 	move.l  (sp)+,y1(a3)
 	move.l  (sp)+,x1(a3)  
 	
 	pea gdflag(a3)
-	pea lineSize(a3)
 	pea lineColor(a3)
+	pea lineSize(a3)
 	pea y2(a3)
 	pea x2(a3)
 	pea y1(a3)
@@ -3323,30 +3270,13 @@ LAB_LINE
 
 	rts
 
-							* parameter count is always even here
-LAB_LNCO
-	SUBQ.w	#2,d1				* subtract 2 from parameter count
-	BEQ		LAB_S1XY			* go do line to X,Y if only two parameters left
-
-	SUBQ.w	#2,d1				* subtract 2 from parameter count
-	BNE		LAB_SNER			* do error if there are other than two
-							* parameters left
-
-	MOVEQ		#84,d0			* draw line from X1,Y1 to X2,Y2
-	MOVE.w	d0,$12(sp)			* set line type (write over line to X1,Y1 type)
-	BRA		LAB_S2XY			* go pop X1,Y1,X2,Y2 and do line
-
-
 *************************************************************************************
 *
 * perform MOVE X,Y
 
 LAB_MOVE
-	MOVEQ		#86,d0			* move to x,y
-	MOVE.l	d0,-(sp)			* save pixel type
-
-	BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
-	BRA.s		LAB_PNCE			* go check only two parameters and do move
+	
+		rts * nowt
 
 
 *************************************************************************************
@@ -3356,12 +3286,10 @@ LAB_MOVE
 LAB_POINT
 	BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
 
-	SUBQ.w	#5,d1				* subtract 2 from parameter count
+	SUBQ.w	#3,d1				* subtract 2 from parameter count
 	BNE		LAB_SNER			* do error if there were other than two
 								* parameters left
 	move.l  (sp)+,gdflag(a3)
-	MOVE.l	(sp)+,lineSize(a3)
-	move.l  (sp)+,lineColor(a3)
 	move.l  (sp)+,y1(a3)
 	move.l  (sp)+,x1(a3)  
 	
@@ -3383,41 +3311,6 @@ LAB_POINT
 LAB_FILL
 	MOVEQ		#89,d0			* flood fill
 *	BRA.s		LAB_pixel			* go do pixel command
-
-* do POINT or FILL pixel based commands
-
-LAB_pixel
-	MOVE.l	d0,-(sp)			* save pixel type
-
-	BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
-	BTST		#0,d1				* test parameter count
-	BEQ		LAB_PNCE			* branch if no line colour parameter
-
-	MOVE.l	(sp)+,d0			* get line colour
-	MOVE.L  d0,lineColor(a3)
-
-	MOVE.w	d1,d2				* copy count
-	ADD.w		d2,d2				* *2
-	ADD.w		d2,d2				* *4
-	BTST		#0,-1(sp,d2.w)		* test point or fill
-	BEQ.s		LAB_SELC			* branch if line
-	
-	BSR		LAB_SFCO			* go mask & set fill colour
-	BRA.s		LAB_PNCO			* continue command
-
-LAB_SELC
-	BSR		LAB_SLCO			* go mask & set line colour
-LAB_PNCO
-	SUBQ.w	#1,d1				* decrement parameter count
-	BEQ		LAB_SRTS			* exit if all done
-
-LAB_PNCE
-	SUBQ.w	#2,d1				* subtract 2 from parameter count
-	BNE		LAB_SNER			* do error if there were other than two
-							* parameters left
-
-	BRA		LAB_S1XY			* go pop X,Y and do pixel command
-
 
 *************************************************************************************
 *
@@ -3460,81 +3353,22 @@ LAB_FELLIPSE
 * than four then LINE_COLOUR and/or FILL_COLOUR must be present
 
 LAB_shape
-	MOVE.l	d0,-(sp)			* save shape type
-
-	BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
-	SUBQ.w	#4,d1				* subtract 4 from parameter count
-	BEQ		LAB_S2XY			* branch if there were 4 parameters
-
-* less or more than four then LINE_COLOUR and/or FILL_COLOUR must be present
-
-	BTST		#0,d1				* test parameter count
-	BNE		LAB_SNFC			* branch if no fill colour parameter
-
-* even number so LINE_COLOUR and FILL_COLOUR must be present
-
-	MOVE.l	(sp)+,d0			* get fill colour
-	BSR		LAB_SFCO			* go mask & set fill colour
-	SUBQ.w	#1,d1				* decrement parameter count
-LAB_SNFC
-	MOVE.l	(sp)+,d0			* get line colour
-	BSR		LAB_SLCO			* go mask & set line colour
-	ADDQ.w	#3,d1				* decrement parameter count and add 4
-	BEQ		LAB_SRTS			* exit if no more parameters
-
-* if there are any parameters left then they must be X1, Y1, X2 and Y2
-* if there are less or more than four then something is wrong
-
-	SUBQ.w	#4,d1				* subtract 4 from parameter count
-	BNE		LAB_SNER			* do error if wasn't 4 parameters
-
-* pull four parameters and do graphics command
-
-LAB_S2XY
-	MOVE.l	(sp)+,d0			* get Y2 off stack
-	BSR		LAB_EVSW			* evaluate signed word in d0
-	MOVE.l	d0,d4				* copy Y2 parameter
-
-	MOVE.l	(sp)+,d0			* get X2 off stack
-	BSR		LAB_EVSW			* evaluate signed word in d0
-	MOVE.l	d0,d3				* copy X2 parameter
-
-* pull two parameters and do graphics command
-
-LAB_S1XY
-	MOVE.l	(sp)+,d0			* get Y1 off stack
-	BSR		LAB_EVSW			* evaluate signed word in d0
-	MOVE.l	d0,d2				* copy Y1 parameter
-	move.l  d2,y1
-
-	MOVE.l	(sp)+,d0			* get X1 off stack
-	BSR		LAB_EVSW			* evaluate signed word in d0
-	MOVE.l	d0,d1				* copy X1 parameter
-	move.l  d1,x1
-
-	MOVE.l	(sp)+,d0			* draw line, pixel or shape
-
 
 
 	RTS
-
-LAB_SRTS
-	MOVE.l	(sp)+,d0			* dump command
-	RTS
-
 
 *************************************************************************************
 *
 * perform MODE m
 
 LAB_MODE
-	BSR		LAB_GTBY			* get byte parameter, result in d0 and Itemp
-	CMP.b		#$12,d0			* compare with max+1
-	BCC		LAB_FCER			* if >= $10 go do function call error
+*	BSR		LAB_GTBY			* get byte parameter, result in d0 and Itemp
+*	CMP.b		#$12,d0			* compare with max+1
+*	BCC		LAB_FCER			* if >= $10 go do function call error
 
-	MOVE.l	d0,d1				* copy it
-	MOVEQ		#92,d0			* set draw mode
-	TRAP		#15				* do I/O function
+*	MOVE.l	d0,d1				* copy it
+*	MOVEQ		#92,d0			* set draw mode
+*	TRAP		#15				* do I/O function
 	RTS
 
 
@@ -3612,10 +3446,6 @@ LAB_LINEC
 							* parameters left
 	
 	MOVE.l	(sp)+,lineColor(a3)
-	
-	pea fillColor(a3)			* clear fill colour
-	jsr gd_clearColor
-	addq #4,SP
 
 	RTS
 
@@ -3628,10 +3458,6 @@ LAB_FILLC
 							* parameters left
 	
 	MOVE.l	(sp)+,fillColor(a3)
-	
-	pea fillColor(a3)			* clear fill colour
-	jsr gd_clearColor
-	addq #4,SP
 
 	RTS
 
@@ -8810,8 +8636,10 @@ TK_SIZE		EQU TK_MODE+1		* $AC EASy68k graphics extension
 TK_CLR		EQU TK_SIZE+1
 TK_GDSWAP	EQU TK_CLR+1
 TK_GDPRINT	EQU TK_GDSWAP+1
+TK_LINEC	EQU TK_GDPRINT+1
+TK_FILLC	EQU TK_LINEC+1
 
-TK_LIST		EQU TK_GDPRINT+1		* $A0
+TK_LIST		EQU TK_FILLC+1		* $A0
 TK_CLEAR		EQU TK_LIST+1		* $A1
 TK_NEW		EQU TK_CLEAR+1		* $A2
 TK_WIDTH		EQU TK_NEW+1		* $A3
@@ -9237,6 +9065,8 @@ LAB_CTBL
 	dc.w 	LAB_CLR-LAB_CTBL
 	dc.w 	LAB_GDSWAP-LAB_CTBL
 	dc.w 	LAB_GDPRINT-LAB_CTBL
+	dc.w 	LAB_LINEC-LAB_CTBL
+	dc.w 	LAB_FILLC-LAB_CTBL
 
 	dc.w	LAB_LIST-LAB_CTBL			* LIST
 	dc.w	LAB_CLEAR-LAB_CTBL		* CLEAR
@@ -9557,6 +9387,10 @@ LAB_KEYT
 	dc.w 	KEY_GDSWAP-TAB_STAR
 	dc.b	'G',5
 	dc.w 	KEY_GDPRINT-TAB_STAR
+	dc.b	'L',3
+	dc.w 	KEY_LINEC-TAB_STAR
+	dc.b	'F',3
+	dc.w 	KEY_FILLC-TAB_STAR
 
 	dc.b	'L',2
 	dc.w	KEY_LIST-TAB_STAR			* LIST
@@ -9866,6 +9700,8 @@ KEY_EXP
 	dc.b	'XP(',TK_EXP			* EXP(
 	dc.b	$00
 TAB_ASCF
+KEY_FILLC
+	dc.b	'ILLC',TK_FILLC			* FILLC
 KEY_FILL
 	dc.b	'ILL',TK_FILL			* FILL
 KEY_FOR
@@ -9911,6 +9747,8 @@ KEY_LEN
 	dc.b	'EN(',TK_LEN			* LEN(
 KEY_LET
 	dc.b	'ET',TK_LET				* LET
+KEY_LINEC
+	dc.b	'INEC',TK_LINEC			* LINEC
 KEY_LINE
 	dc.b	'INE',TK_LINE			* LINE
 KEY_LIST
