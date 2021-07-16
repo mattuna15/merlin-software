@@ -6,6 +6,5 @@ unsigned char bcd2bin(unsigned char in);
 int _strnicmp(const char *s1, const char *s2, size_t n);
 void hexdump(void *data, uint16_t size, uint16_t offset);
 void dump(unsigned char *buf);
-void PrintDirectory();
 
 #endif

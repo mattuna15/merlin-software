@@ -153,7 +153,7 @@
 /  on character encoding. When LFN is not enabled, these options have no effect. */
 
 
-#define FF_FS_RPATH		1
+#define FF_FS_RPATH		2
 /* This option configures support for relative path.
 /
 /   0: Disable relative path and remove related functions.
@@ -224,7 +224,7 @@
 / System Configurations
 /---------------------------------------------------------------------------*/
 
-#define FF_FS_TINY		1
+#define FF_FS_TINY		0
 /* This option switches tiny buffer configuration. (0:Normal or 1:Tiny)
 /  At the tiny configuration, size of file object (FIL) is shrinked FF_MAX_SS bytes.
 /  Instead of private sector buffer eliminated from the file object, common sector

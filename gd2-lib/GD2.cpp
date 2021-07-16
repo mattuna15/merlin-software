@@ -1695,12 +1695,16 @@ byte GDClass::load(const char *filename, void (*progress)(long, long))
   }
   byte buf[512];
   UINT n;
+
+  printf("\r\n");
   res = f_read(&f, buf, 512, &n);
   while (n > 0) {
     GDTR.cmd_n(buf, (n + 3) & ~3);
     res = f_read(&f, buf, 512, &n);
+    printf(".");
   }
   f_close(&f);
+  printf("\r\n");
   return 1;
 }
 

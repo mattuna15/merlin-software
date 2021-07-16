@@ -8,7 +8,7 @@
 #include "ff.h"
 #include "fat_compat.h"
 
-#define TESTDIR "/"
+//#define TESTDIR "/"
 
 extern FILINFO DirEntries[MAXDIRENTRIES];
 extern unsigned char sort_table[MAXDIRENTRIES];
@@ -33,64 +33,42 @@ char * dateTimeStamp(FILINFO file) {
 }
 
 
-
-void PrintDirectory()
+FRESULT scan_files (
+    char* path        /* Start node to be scanned (***also used as work area***) */
+)
 {
-	unsigned char i;
-	unsigned char k;
-	unsigned long lastStartCluster;
-	int page = 0;
+    FRESULT res;
+    DIR dir;
+    UINT i;
+    static FILINFO fno;
 
-	ChangeDirectoryName(TESTDIR);
+    res = f_opendir(&dir, path);                       /* Open the directory */
 
-	ScanDirectory(SCAN_INIT, "*", SCAN_DIR | SCAN_LFN);
-	printf("\r\nDIR: %s\r\n", TESTDIR);
-	while (1)
-	{
-		for (i = 0; i < nDirEntries; i++)
-		{
-			k = sort_table[i];
-			printf("%c %s\t%s\t%lu bytes\r\n", i == iSelectedEntry ? '*' : ' ', DirEntries[k].fname, dateTimeStamp(DirEntries[k]), DirEntries[k].fsize);
-		}
-		lastStartCluster = DirEntries[0].fclust;
-		if (nDirEntries == 8)
-		{
-			iSelectedEntry = MAXDIRENTRIES - 1;
-			ScanDirectory(SCAN_NEXT_PAGE, "*", SCAN_DIR | SCAN_LFN);
-			if (DirEntries[0].fclust == lastStartCluster)
-				break;
-			page++;
-		}
-		else
-		{
-			break;
-		}
-	}
+	if (res != FR_OK)
+		return res;
+	
+    if (res == FR_OK) {
+        for (;;) {
+            res = f_readdir(&dir, &fno);                   /* Read a directory item */
+            if (res != FR_OK || fno.fname[0] == 0) break;  /* Break on error or end of dir */
+            if (fno.fattrib & AM_DIR) {                    /* It is a directory */
+                i = strlen(path);
+                sprintf(&path[i], "/%s", fno.fname);
+                //res = scan_files(path);                    /* Enter the directory */
+                //if (res != FR_OK) break;
+				printf("DIR %s\t%s\r\n", fno.fname, dateTimeStamp(fno));
+                path[i] = 0;
+            } else {                                       /* It is a file. */
+                printf("%s\t%s\t%lu bytes\r\n", fno.fname, dateTimeStamp(fno), fno.fsize);
+            }
+        }
+        f_closedir(&dir);
+    }
 
-	printf("\r\nEnd of Listing.\r\n");
+    return res;
 }
 
 
-void dump(unsigned char *buf)
-{
-	for (int i = 0; i < 512; i++)
-	{
-		if (i % 16 == 0)
-		{
-			printf(" ");
-			for (int j = 0; j < 16; j++)
-			{
-				if (buf[i - 16 + j] > 32 && buf[i - 16 + j] < 128)
-					printf("%c", buf[i - 16 + j]);
-				else
-					printf(" ");
-			}
-			printf("\r\n");
-		}
-		printf("%02x ", buf[i]);
-	}
-	printf("\r\n");
-}
 
 unsigned char bin2bcd(unsigned char in) {
   return 16*(in/10) + (in % 10);

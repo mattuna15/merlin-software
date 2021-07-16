@@ -56,11 +56,10 @@
 *// void gd_text(int x, int y, int justify, const char *text, int height, int width, int color, int font );
 *// void gd_plot(int x1, int y1, int size, int color);
 
-
+		XREF initDrive
 		XREF gd_begin
-
+		XREF cd
 		XREF PrintDirectory
-		XREF FindDrive
 		XREF loadFile
 		XREF saveFile
 		XREF deleteFile
@@ -304,6 +303,7 @@ ccnull		ds.b	1		* CTRL-C last received byte 'life' timer
 file_byte	ds.b	1		* load/save data byte
 file_id		ds.l	1		* load/save file ID
 load_first      ds.b    1               * Boolean indicating if first byte read
+load_cwd		ds.b    13 
 load_filename   ds.b    13              * Hold LOAD/SAVE filename (DOS 8.3 format plus terminating null)
 
 * GFX pointers
@@ -320,13 +320,17 @@ fillColor ds.l 1
 lineColor ds.l 1
 lineSize ds.l 1
 bitmapHandle ds.l 1
+bitmapCell ds.l 1
+bitmapBlendSrc ds.l 1
+bitmapBlendDst ds.l 1
 gfxText		ds.l 1
 gfxTextLen	ds.W 1
 
 		dc.w	0		* dummy even value and zero pad byte
 
 main
-	jsr FindDrive
+	move.l #ROOT,load_cwd(a3)
+	jsr initDrive
 	jsr gd_begin
 
 	; Set up interrupt vectors...
@@ -395,8 +399,9 @@ VEC_OUT2
 		* load one byte to SD Card
 		pea file_byte(A3)
 		pea load_filename(A3)
+		pea load_cwd(a3)
         jsr saveFile
-		addq #8,SP
+		add #12,SP
 
         MOVEM.L  (A7)+,A0-A2/D1-D7    * Restore working registers
         RTS	
@@ -412,8 +417,9 @@ VEC_IN2
 * Read one byte from SD Card
 
 		pea load_filename(A3)
+		pea load_cwd(a3)
         jsr loadFile
-		addq #4,SP
+		addq #8,SP
 
 * Check for end of file character ('~') and if found, redirect
 * input back to console port.
@@ -449,6 +455,7 @@ RET1    MOVEM.L  (A7)+,A0/D0    * Restore working registers
 
  ifeq   FAT_SUPPORT
 
+
 VEC_LD
        MOVEQ           #$2E,d7                         * error code $2E "Not implemented" error
        BRA             LAB_XERR                        * do error #d7, then warm start
@@ -459,6 +466,41 @@ VEC_LD
 * Drive Host Board connected to the auxiliary serial port.
 
  ifne   FAT_SUPPORT
+
+LAB_CDIR  
+		MOVEM.L  A0/D1,-(A7)    * Save working registers
+		LEA             LAB_DIRSTR(PC),A0             * Prompt for filename.
+        BSR             PRINTSTRING1                    * Print null terminated string
+        MOVE.L          A3,A2                           * Save pointer to RAM variables
+GETFN1C  JSR             VEC_IN                          * Get character
+        BCC             GETFN1C                          * Go back if carry clear, indicating no key pressed
+        JSR             VEC_OUT                         * Echo the character
+        CMP.B           #$0D,D0                         * Was it <Return>?
+        BEQ             ENDLN1C                          * If so, branch
+        CMP.B           #$7F,D0                         * Was it <Delete>?
+        BEQ             DELETE1C                         * If so, handle delete
+        CMP.B           #$08,D0                         * Was it <Backspace?
+        BEQ             DELETE1 C                        * If so, handle as delete
+        MOVE.B          D0,load_cwd(A2)            * Save in buffer
+        ADDQ.L          #1,A2                           * Advance string pointer
+        BRA             GETFN1C                          * Go back and get next character
+DELETE1C SUBQ.L          #1,A2                           * Delete last character entered
+        BRA             GETFN1C                          * Go back and get next character
+
+ENDLN1C  MOVE.B          #0,load_cwd(A2)            * Add terminating null to filename
+
+        LEA      load_cwd(A3),A0 * Send filename string
+
+* Read one byte from SD Card
+
+		pea load_cwd(A3)
+        jsr cd
+		addq #4,SP
+
+		MOVEM.L  (A7)+,A0/D1    * Restore working registers
+
+        RTS
+
 
 VEC_LD  LEA             LAB_FILENAME(PC),A0             * Prompt for filename.
         BSR             PRINTSTRING1                    * Print null terminated string
@@ -512,8 +554,9 @@ DELETED SUBQ.L          #1,A2                           * Delete last character 
 ENDLND  MOVE.B          #0,load_filename(A2)            * Add terminating null to filename
         
 		PEA				load_filename(A3) 
+		pea 			load_cwd(a3)
 		JSR				deleteFile
-		ADDQ			#4,sp
+		ADDQ			#8,sp
 * Input routine will detect end of file and redirect input back to
 * console port.
 		MOVEM.L  (A7)+,A0-A2/D1-D7    * Restore working registers
@@ -581,6 +624,9 @@ LAB_READN
 
 LAB_FILENAME
         dc.b            'Filename? ',$00
+
+LAB_DIRSTR
+        dc.b            'Directory? ',$00
 
  endc
         even
@@ -2307,6 +2353,59 @@ LAB_NoSt
 
 	BRA.s		LAB_17D5			* do string LET & return
 
+*************************************************************************************
+*
+* void gd_draw_bitmap(uint32_t *x, uint32_t *y, uint32_t *size, uint32_t *handle, 
+*                        uint32_t *cell, uint32_t *blendsrc, uint32_t *blenddst )
+
+LAB_BITMAP
+	BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
+
+	SUBQ.w	#4,d1			
+	BNE		LAB_SNER			
+
+	move.l  (sp)+,bitmapBlendDst(a3)
+	move.l  (sp)+,bitmapBlendSrc(a3)
+	move.l  (sp)+,bitmapCell(a3)
+	move.l  (sp)+,bitmapHandle(a3)
+
+	pea bitmapBlendDst(a3)
+	pea bitmapBlendSrc(a3)
+	pea bitmapCell(a3)
+	pea bitmapHandle(a3)
+	pea lineSize(a3)
+	pea y1(a3)
+	pea x1(a3)
+	jsr gd_draw_bitmap
+	add #28,sp
+
+	RTS
+
+*************************************************************************************
+*
+* VLOAD -> gd
+* void gd_load_bitmapfile(uint32_t *filename, uint32_t *flen) 
+
+LAB_VLOAD
+
+	MOVEM.L  A0-A2/D0-D7,-(A7)    * Save working registers
+
+	BSR		LAB_EVEX			* evaluate expression
+	BSR		LAB_GBYT			* scan memory
+	BNE		LAB_SNER			* if not [EOL] or [EOS] do syntax error and
+						* warm start
+
+	MOVE.l	(a4)+,gfxText(a3)			* string address from descriptor stack
+	MOVE.w	(a4)+,gfxTextLen(a3)			* string length from descriptor stack
+
+	pea gfxTextLen(a3)
+	pea gfxText(a3)
+	jsr gd_load_bitmapfile
+	add #8,sp
+
+	MOVEM.L  (A7)+,A0-A2/D0-D7    * Restore working registers
+
+	rts
 
 *************************************************************************************
 *
@@ -3819,7 +3918,9 @@ LAB_DIR
 
 	MOVEM.L  A0-A2/D0-D7,-(A7)    * Save working registers
 
+	pea load_cwd(a3)
 	jsr PrintDirectory
+	addq #4,sp
 
 	MOVEM.L  (A7)+,A0-A2/D0-D7    * Restore working registers
 
@@ -8587,7 +8688,8 @@ RTS_025
 * token values needed for BASIC
 
 TK_DIR		EQU $80		* $e5
-TK_DEL		EQU TK_DIR+1
+TK_CD		EQU TK_DIR+1		* $e5
+TK_DEL		EQU TK_CD+1
 TK_END		EQU TK_DEL+1			* $80
 TK_FOR		EQU TK_END+1		* $81
 TK_NEXT		EQU TK_FOR+1		* $82
@@ -8638,8 +8740,10 @@ TK_GDSWAP	EQU TK_CLR+1
 TK_GDPRINT	EQU TK_GDSWAP+1
 TK_LINEC	EQU TK_GDPRINT+1
 TK_FILLC	EQU TK_LINEC+1
+TK_VLOAD	EQU TK_FILLC+1
+TK_BITMAP	EQU TK_VLOAD+1
 
-TK_LIST		EQU TK_FILLC+1		* $A0
+TK_LIST		EQU TK_BITMAP+1		* $A0
 TK_CLEAR		EQU TK_LIST+1		* $A1
 TK_NEW		EQU TK_CLEAR+1		* $A2
 TK_WIDTH		EQU TK_NEW+1		* $A3
@@ -9015,6 +9119,7 @@ KFCTSEED	equ	$26A3D110		* $26A3D110
 
 LAB_CTBL
 	dc.w	LAB_DIR-LAB_CTBL			* DIr
+	dc.w	LAB_CDIR-LAB_CTBL			* DIr
 	dc.w	LAB_DEL-LAB_CTBL			* Del
 	dc.w	LAB_END-LAB_CTBL			* END
 	dc.w	LAB_FOR-LAB_CTBL			* FOR
@@ -9067,6 +9172,8 @@ LAB_CTBL
 	dc.w 	LAB_GDPRINT-LAB_CTBL
 	dc.w 	LAB_LINEC-LAB_CTBL
 	dc.w 	LAB_FILLC-LAB_CTBL
+	dc.w 	LAB_VLOAD-LAB_CTBL
+	dc.w 	LAB_BITMAP-LAB_CTBL
 
 	dc.w	LAB_LIST-LAB_CTBL			* LIST
 	dc.w	LAB_CLEAR-LAB_CTBL		* CLEAR
@@ -9290,6 +9397,8 @@ TAB_CHRT
 LAB_KEYT
 	dc.b	'D',1
 	dc.w	KEY_DIR-TAB_STAR			* DIR
+	dc.b	'C',2
+	dc.w	KEY_CD-TAB_STAR			* DIR
 	dc.b	'D',1
 	dc.w	KEY_DEL-TAB_STAR			* DEL
 	dc.b	'E',1
@@ -9391,6 +9500,10 @@ LAB_KEYT
 	dc.w 	KEY_LINEC-TAB_STAR
 	dc.b	'F',3
 	dc.w 	KEY_FILLC-TAB_STAR
+	dc.b	'V',3
+	dc.w 	KEY_VLOAD-TAB_STAR
+	dc.b	'B',4
+	dc.w 	KEY_BITMAP-TAB_STAR
 
 	dc.b	'L',2
 	dc.w	KEY_LIST-TAB_STAR			* LIST
@@ -9589,6 +9702,7 @@ LAB_AD	dc.b	'Address',$00
 LAB_FO	dc.b	'Format',$00
 LAB_NI  dc.b    'Not implemented',$00
 
+ROOT	dc.b    '/',$00
 
 *************************************************************************************
 *
@@ -9642,6 +9756,8 @@ KEY_BINS
 	dc.b	'IN$(',TK_BINS			* BIN$(
 KEY_BITCLR
 	dc.b	'ITCLR',TK_BITCLR			* BITCLR
+KEY_BITMAP
+	dc.b	'ITMAP',TK_BITMAP			* BITCLR
 KEY_BITSET
 	dc.b	'ITSET',TK_BITSET			* BITSET
 KEY_BITTST
@@ -9650,6 +9766,8 @@ KEY_BITTST
 TAB_ASCC
 KEY_CALL
 	dc.b	'ALL',TK_CALL			* CALL
+KEY_CD
+	dc.b	'DIR',TK_CD			* CD
 KEY_CHRS
 	dc.b	'HR$(',TK_CHRS			* CHR$(
 KEY_CLEAR
@@ -9875,6 +9993,8 @@ KEY_USR
 TAB_ASCV
 KEY_VAL
 	dc.b	'AL(',TK_VAL			* VAL(
+KEY_VLOAD
+	dc.b	'LOAD',TK_VLOAD
 KEY_VPTR
 	dc.b	'ARPTR(',TK_VPTR			* VARPTR(
 	dc.b	$00
@@ -9908,7 +10028,7 @@ LAB_RMSG
 	dc.b	$0D,$0A,'Ready',$0D,$0A,$00
 LAB_SMSG
 	dc.b	' Bytes free',$0D,$0A,$0A
-	dc.b	'GCC Enhanced 68k BASIC for Merlin V3.6 2021',$0D,$0A,$00
+	dc.b	'GCC Enhanced 68k BASIC for Merlin V3.7 2021, FATFS & GD extensions',$0D,$0A,$00
 
 
 .int1:

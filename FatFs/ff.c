@@ -5007,9 +5007,11 @@ FRESULT f_chdir(
 	FATFS *fs;
 	DEF_NAMBUF
 
-	/* Get logical drive */
-	res = mount_volume(&path, &fs, 0);
-	if (res == FR_OK)
+	CurrVol = 0;
+
+	fs = FatFs[0];
+	/* Get pointer to the filesystem object */
+	if (fs != NULL)
 	{
 		dj.obj.fs = fs;
 		INIT_NAMBUF(fs);
@@ -5091,7 +5093,12 @@ FRESULT f_getcwd(
 
 	/* Get logical drive */
 	buff[0] = 0;									   /* Set null string to get current volume */
-	res = mount_volume((const TCHAR **)&buff, &fs, 0); /* Get current volume */
+	//res = mount_volume((const TCHAR **)&buff, &fs, 0); /* Get current volume */
+
+	fs = FatFs[0];
+	res = FR_OK;
+
+	printf("\r\n%lu\r\n", fs->cdir);
 	if (res == FR_OK)
 	{
 		dj.obj.fs = fs;
