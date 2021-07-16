@@ -1,4 +1,4 @@
-#define LOAD_ASSETS()  GD.safeload("cobra.gd2");
+#define LOAD_ASSETS()  GD.safeload("COBRA.GD2");
 #define BACKGROUND_HANDLE 0
 #define BACKGROUND_WIDTH 256
 #define BACKGROUND_HEIGHT 256

@@ -329,7 +329,6 @@ gfxTextLen	ds.W 1
 		dc.w	0		* dummy even value and zero pad byte
 
 main
-	move.l #ROOT,load_cwd(a3)
 	jsr initDrive
 	jsr gd_begin
 

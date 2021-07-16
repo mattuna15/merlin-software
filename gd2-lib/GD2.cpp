@@ -1685,12 +1685,12 @@ void GDClass::reset() {
 byte GDClass::load(const char *filename, void (*progress)(long, long))
 {
   FIL f; 
-  char full_name[2048]  = "sdcard/";
+  char full_name[2048]  = "/SDCARD/";
   strcat(full_name, filename);
 
   FRESULT res = f_open(&f, full_name, FA_OPEN_EXISTING | FA_READ);
   if (res != FR_OK) {
-    perror(full_name);
+    printf("\r\n%s - not found - %d\r\n",full_name,res);
     exit(1);
   }
   byte buf[512];

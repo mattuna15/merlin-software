@@ -34,7 +34,7 @@
 #define BOARD BOARD_GAMEDUINO23 // board, from above
 #endif
 
-#define STORAGE 0     // Want SD storage?
+#define STORAGE 1     // Want SD storage?
 #define CALIBRATION 0 // Want touchscreen calibration?
 
 #define byte uint8_t

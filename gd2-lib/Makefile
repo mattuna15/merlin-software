@@ -1,7 +1,7 @@
-all: mandel.run
+all: cobra.run
 
-mandel.run: mandel.c
-	m68k-elf-gcc  -O3  -m68000 -g -O mandel.c -o mandel.run -T /opt/m68k-elf/m68k-elf/lib/m68000/ts2.ld -L. -lm -lGD2 -L../FatFs -lMerlinFat -Xlinker -Map=terminal.map
+cobra.run: cobra.cpp
+	m68k-elf-g++ -fno-exceptions -fomit-frame-pointer -Wall  -O3  -m68000 -g -O cobra.cpp -o cobra.run -T /opt/m68k-elf/m68k-elf/lib/m68000/ts2.ld -L. -lm -lGD2 -L../FatFs -lMerlinFat -Xlinker -Map=cobra.map
 
 
 lib: libGD2.a
@@ -11,7 +11,7 @@ libGD2.a: GD2.cpp  GD-c.cpp
 	m68k-elf-ar rcs libGD2.a *.o 
 
 clean:
-	$(RM) *.o *.a
+	$(RM) *.o *.a *.run
 
 
 distclean: clean
