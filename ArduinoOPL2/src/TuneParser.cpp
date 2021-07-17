@@ -281,6 +281,9 @@ unsigned long TuneParser::update(Tune& tune) {
 	}
 
 	tune.nextTick = millis();
+
+	//printf("\r\nNext tick: %lu\r\n", tune.nextTick);
+
 	unsigned long t = millis();
 
 	for (byte i = 0; i < tune.numVoices; i ++) {

@@ -63,7 +63,7 @@ public:
 
 		*opl_data_out = x;
 
-		//printf("\r\nData In: %X", x);
+		printf("\r\nData In: %X", x);
 
 		BIT_SET(*opl_ctl, VALID_OUT);
 		BIT_CLEAR(*opl_ctl, VALID_OUT);
@@ -72,7 +72,7 @@ public:
 		{
 		}
 
-		//printf("\r\nData Out: %X", r);
+		printf("\r\nData Out: %X", r);
 
 		return 0;
 	}

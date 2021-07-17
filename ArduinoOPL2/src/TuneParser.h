@@ -1,4 +1,4 @@
-#include <OPL3Duo.h>
+#include "OPL3Duo.h"
 
 #define TUNE_CMD_END '\0'
 #define TUNE_CMD_INSTRUMENT 'I'
