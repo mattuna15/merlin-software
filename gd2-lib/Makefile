@@ -1,13 +1,32 @@
-all: cobra.run
+all: lib cobra.run mandel.run 
 
 cobra.run: cobra.cpp
-	m68k-elf-g++ -fno-exceptions -fomit-frame-pointer -Wall  -O3  -m68000 -g -O cobra.cpp -o cobra.run -T /opt/m68k-elf/m68k-elf/lib/m68000/ts2.ld -L. -lm -lGD2 -L../FatFs -lMerlinFat -Xlinker -Map=cobra.map
+	m68k-elf-g++ -fno-exceptions -fomit-frame-pointer -Wall -m68000 -g -O3 cobra.cpp ../fp-lib/ieee754.c -o cobra.run  \
+			-Wl,--wrap=__muldf3 \
+			-Wl,--wrap=__divdf3 \
+			-Wl,--wrap=__subdf3 \
+			-Wl,--wrap=__adddf3 \
+			-Wl,--wrap=__truncdfsf2 \
+			-Wl,--wrap=__extendsfdf2 \
+			 -I../fp-lib/ -T /opt/m68k-elf/m68k-elf/lib/m68000/ts2.ld -L. -lGD2 -L../FatFs -lMerlinFat -Xlinker -Map=cobra.map
 
+mandel.run: mandel.c
+	m68k-elf-g++ -fno-exceptions -fomit-frame-pointer -Wall -m68000 -g -O3 mandel.c ../fp-lib/ieee754.c -o mandel.run  \
+			-Wl,--wrap=__muldf3 \
+			-Wl,--wrap=__divdf3 \
+			-Wl,--wrap=__subdf3 \
+			-Wl,--wrap=__adddf3 \
+			-Wl,--wrap=__truncdfsf2 \
+			-Wl,--wrap=__extendsfdf2 \
+			 -I../fp-lib/ -T /opt/m68k-elf/m68k-elf/lib/m68000/ts2.ld -L. -lGD2 -L../FatFs -lMerlinFat -Xlinker -Map=mandel.map
 
 lib: libGD2.a
 
+
 libGD2.a: GD2.cpp  GD-c.cpp
-	m68k-elf-g++ -O3 -fno-exceptions -fomit-frame-pointer -Wall -m68000 -c GD2.cpp GD-c.cpp
+		 
+	m68k-elf-g++ -O3 -fno-exceptions -fomit-frame-pointer -Wall -m68000 -c GD2.cpp GD-c.cpp 
+		 	
 	m68k-elf-ar rcs libGD2.a *.o 
 
 clean:

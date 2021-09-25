@@ -1,5 +1,4 @@
 #include "GD2.h"
-#include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -13,19 +12,19 @@
 
 static byte VXSCALE = 16;
 
-static float model_mat[9] = {1.0, 0.0, 0.0,
+static double model_mat[9] = {1.0, 0.0, 0.0,
                              0.0, 1.0, 0.0,
                              0.0, 0.0, 1.0};
-static float normal_mat[9] = {1.0, 0.0, 0.0,
+static double normal_mat[9] = {1.0, 0.0, 0.0,
                               0.0, 1.0, 0.0,
                               0.0, 0.0, 1.0};
 
 #define M(nm, i, j) ((nm)[3 * (i) + (j)])
 
-void mult_matrices(float *a, float *b, float *c)
+void mult_matrices(double *a, double *b, double *c)
 {
   int i, j, k;
-  float result[9];
+  double result[9];
   for (i = 0; i < 3; i++)
   {
     for (j = 0; j < 3; j++)
@@ -44,25 +43,25 @@ void mult_matrices(float *a, float *b, float *c)
 // Returns 3x3 rotation matrix in 'm'
 // and its invese in 'mi'
 
-static void rotate(float *m, float *mi, float angle, float *axis)
+static void rotate(double *m, double *mi, double angle, double *axis)
 {
-  float x = axis[0];
-  float y = axis[1];
-  float z = axis[2];
+  double x = axis[0];
+  double y = axis[1];
+  double z = axis[2];
 
-  float s = sin(angle);
-  float c = cos(angle);
+  double s = sin(angle);
+  double c = cos(angle);
 
-  float xx = x * x * (1 - c);
-  float xy = x * y * (1 - c);
-  float xz = x * z * (1 - c);
-  float yy = y * y * (1 - c);
-  float yz = y * z * (1 - c);
-  float zz = z * z * (1 - c);
+  double xx = x * x * (1 - c);
+  double xy = x * y * (1 - c);
+  double xz = x * z * (1 - c);
+  double yy = y * y * (1 - c);
+  double yz = y * z * (1 - c);
+  double zz = z * z * (1 - c);
 
-  float xs = x * s;
-  float ys = y * s;
-  float zs = z * s;
+  double xs = x * s;
+  double ys = y * s;
+  double zs = z * s;
 
   m[0] = xx + c;
   m[1] = xy - zs;
@@ -89,10 +88,10 @@ static void rotate(float *m, float *mi, float angle, float *axis)
   mi[8] = m[8];
 }
 
-static void rotation(float angle, float *axis)
+static void rotation(double angle, double *axis)
 {
-  float mat[9];
-  float mati[9];
+  double mat[9];
+  double mati[9];
 
   rotate(mat, mati, angle, axis);
   mult_matrices(model_mat, mat, model_mat);
@@ -103,9 +102,9 @@ static void rotation(float angle, float *axis)
 class Vector3
 {
 public:
-    float x, y, z;
+    double x, y, z;
 
-    void set(float _x, float _y, float _z) {
+    void set(double _x, double _y, double _z) {
         x = _x;
         y = _y;
         z = _z;
@@ -113,7 +112,7 @@ public:
 
     // functions
     void normalize() {
-      float invLength = 1 / sqrtf(x*x + y*y + z*z);
+      double invLength = 1 / sqrtf(x*x + y*y + z*z);
       x *= invLength;
       y *= invLength;
       z *= invLength;
@@ -124,9 +123,9 @@ public:
       z -= rhs.z;
     }
     void cross(const Vector3& rhs) {
-        float _x = y*rhs.z - z*rhs.y;
-        float _y = z*rhs.x - x*rhs.z;
-        float _z = x*rhs.y - y*rhs.x;
+        double _x = y*rhs.z - z*rhs.y;
+        double _y = z*rhs.x - x*rhs.z;
+        double _z = x*rhs.y - y*rhs.x;
         set(_x, _y, _z);
     }
 };
@@ -138,12 +137,12 @@ public:
 typedef struct
 {
   int x, y;
-  float z;
+  double z;
 } xyz;
 
 static xyz projected[N_VERTICES];
 
-void project(float distance)
+void project(double distance)
 {
   const int8_t *pm = COBRA_vertices;
   const int8_t *pm_e = pm + sizeof(COBRA_vertices);
@@ -156,10 +155,10 @@ void project(float distance)
     x = *pm++;
     y = *pm++;
     z = *pm++;
-    float xx = x * model_mat[0] + y * model_mat[3] + z * model_mat[6];
-    float yy = x * model_mat[1] + y * model_mat[4] + z * model_mat[7];
-    float zz = x * model_mat[2] + y * model_mat[5] + z * model_mat[8] + distance;
-    float q = hw / (100 + zz);
+    double xx = x * model_mat[0] + y * model_mat[3] + z * model_mat[6];
+    double yy = x * model_mat[1] + y * model_mat[4] + z * model_mat[7];
+    double zz = x * model_mat[2] + y * model_mat[5] + z * model_mat[8] + distance;
+    double q = hw / (100 + zz);
     dst->x = VXSCALE * (hw + xx * q);
     dst->y = VXSCALE * (GD.h / 2 + yy * q);
     dst->z = zz;
@@ -292,8 +291,8 @@ void draw_edges()
 
 static void draw_navlight(byte nf)
 {
-  float l0z = projected[N_VERTICES - 2].z;
-  float l1z = projected[N_VERTICES - 1].z;
+  double l0z = projected[N_VERTICES - 2].z;
+  double l1z = projected[N_VERTICES - 1].z;
   byte i;
   if (nf == 0) // draw the one with smallest z
     i = (l0z < l1z) ? (N_VERTICES - 2) : (N_VERTICES - 1);
@@ -316,12 +315,12 @@ static void draw_navlight(byte nf)
 /* simple trackball-like motion control */
 /* Based on projtex.c - by David Yu and David Blythe, SGI */
 
-float angle, axis[3] = {0, 1, 0};
-float lastPos[3];
+double angle, axis[3] = {0, 1, 0};
+double lastPos[3];
 
-void ptov(int x, int y, int width, int height, float v[3])
+void ptov(int x, int y, int width, int height, double v[3])
 {
-  float d, a;
+  double d, a;
 
   /* project x,y onto a hemi-sphere centered within width, height */
   v[0] = (2.0 * x - width) / width;
@@ -342,7 +341,7 @@ void startMotion(int x, int y)
 
 void trackMotion(int x, int y)
 {
-  float curPos[3], dx, dy, dz;
+  double curPos[3], dx, dy, dz;
 
   ptov(x, y, GD.w, GD.h, curPos);
 
@@ -355,7 +354,7 @@ void trackMotion(int x, int y)
   axis[1] = lastPos[2] * curPos[0] - lastPos[0] * curPos[2];
   axis[2] = lastPos[0] * curPos[1] - lastPos[1] * curPos[0];
 
-  float mag = 1 / sqrt(axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]);
+  double mag = 1 / sqrt(axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]);
   axis[0] *= mag;
   axis[1] *= mag;
   axis[2] *= mag;
