@@ -19,11 +19,6 @@
 //                 dc.l cins * 2
 //                 dc.l OUTPUT   *3
 				
-// 				00E01598= 00E00D54                3451  trap14_jump     dc.l cout * 0
-// 00E0159C= 00E00D76                3452                  dc.l cin * 1
-// 00E015A0= 00E00D9A                3453                  dc.l cins * 2
-// 00E015A4= 00E0173E                3454                  dc.l OUTPUT   *3
-// 00E015A8= 00E0175C                3455                  dc.l out1cr * 4
  */
 
 #include "asm.h"
@@ -36,8 +31,8 @@
 	.global SYM (outln)
 	.global SYM (outbyte)
 	.global SYM (inbyte)
-	.global SYM (havebyte)
 	.global SYM (inbyte_noecho)
+	.global SYM (havebyte)
 
 /*
  * _exit -- Exit from the application. Normally we cause a user trap
@@ -46,29 +41,8 @@
 	.text
 	.align	2
 SYM (_exit):
-	JMP 0xE00BC0
-	
-	
-	
-//no echo E00D9A
-/*
- * inbyte - no echo -- get a byte from the console serial port
- *	d0 - contains the byte read in
- *
- * Echoes the character the the console.
- * Converts a carriage return character to newline.
- */
-	.text
-	.align	2
-SYM (inbyte_noecho):
-	movem.l	d1/a0,-(sp)		// Save modified registers
-	jsr 0xE00D9A
-	extw	d0			// Extend byte result to word
-	extl	d0			// ...and longword
-	
-	movem.l	(sp)+,d1/a0		// Restore registers
-	rts
-
+	move.b	#START,d7
+	trap	IMM(14)
 
 /*
  * inbyte -- get a byte from the console serial port
@@ -81,12 +55,25 @@ SYM (inbyte_noecho):
 	.align	2
 SYM (inbyte):
 	movem.l	d1/a0,-(sp)		// Save modified registers
-	jsr 0xE00D76
+	move.b	#INCHE,d7		// Trap function code
+	jsr     0x2f98	
 	extw	d0			// Extend byte result to word
 	extl	d0			// ...and longword
-	
+	cmp	#'\r',d0		// Is it newline?
+	bne	notnl1			// Branch if not
+	move.b	#'\n',d0		// Convert to newline
+notnl1: bsr	outbyte			// Echo it
 	movem.l	(sp)+,d1/a0		// Restore registers
 	rts
+
+        .text
+        .align  2
+SYM (inbyte_noecho):
+        movem.l d1/a0,-(sp)             // Save modified registers
+        move.b  #INCHE,d7               // Trap function code
+        jsr     0x2f98
+notln2: movem.l (sp)+,d1/a0             // Restore registers
+        rts
 
 /*
  * outbyte -- sends a byte out the serial port
@@ -98,14 +85,13 @@ SYM (inbyte):
 	.align	2
 SYM (outbyte):
 	movem.l	d0/d1/a0,-(sp)		// Save modified registers
+	move.b	#OUTCH,d7		// Trap function code
 	cmp	#'\n',d0		// Is it newline?
 	bne	notnl2			// Branch if not
 	move.b  #'\r',d0		// Carriage return
-	move.b #0,d1
-	jsr 0x00E00D54
+	jsr 0x2e22	
 	move.b  #'\n',d0		// Newline
-notnl2:
-	jsr 0x00E00D54		// Call TUTOR function
+notnl2: jsr 0x2e22	
 	movem.l	(sp)+,d0/d1/a0		// Restore registers
 	rts
 
@@ -121,10 +107,8 @@ SYM (outln):
 	move.l	a0,a5			// Start of string
 	move.l	a1,a6			// End of string
 	addq.l	#1,a6			// Adjust to point to end + 1
-	
-	move.b #4,d1
-	jsr 0xE01734
-
+	move.b	#OUT1CR,d7		// Trap function code
+	jsr 0x2bf8	// Call TUTOR function
 	movem.l	(sp)+,d0/d1/a0/a5/a6	// Restore registers
 	rts
 
@@ -141,13 +125,11 @@ SYM (outstr):
 	move.l	a0,a5			// Start of string
 	move.l	a1,a6			// End of string
 	addq.l	#1,a6			// Adjust to point to end + 1
-
-	move.b #3,d1
-	jsr 0x00E01716
-
+	move.b	#OUTPUT,d7		// Trap function code
+	jsr 0x2c12	// Call TUTOR function
 	movem.l	(sp)+,d0/d1/a0/a5/a6	// Restore registers
 	rts
-
+	
 /*
  * havebyte -- checks to see if there is a byte in the serial port,
  *             returns 1 if there is a byte, 0 otherwise.
