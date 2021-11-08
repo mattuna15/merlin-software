@@ -9,6 +9,7 @@ float-test.run: ieee754.c float-test.c
 			-Wl,--wrap=__adddf3 \
 			-Wl,--wrap=__truncdfsf2 \
 			-Wl,--wrap=__extendsfdf2 \
+			-Wl,--wrap=__sqrt \
 			ieee754.c float-test.c \
 			-o float-test.run \
 			-lm -T /opt/m68k-elf/m68k-elf/lib/m68000/ts2.ld -Xlinker -Map=float.map

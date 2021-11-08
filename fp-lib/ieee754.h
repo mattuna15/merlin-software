@@ -48,8 +48,6 @@ double __wrap_cos(double a);
 double __wrap_sin(double a);
 double __wrap_tan(double a);
 
-void double_to_string(double f, char *str, uint8_t precision);
-
 #ifdef __cplusplus
 }
 #endif

@@ -34,6 +34,22 @@ SV\@:
 
 *-------------------------------------------------------------------------
 
+DATA_TX = 0xF40041
+DATA_RX = 0xF40043
+DATA_CTL = 0xF40045
+DATA_TX_SPACE = 0xF40046
+DATA_RX_COUNT = 0xF40048
+
+* TCP0_TxValid    => eth_ctl(6), --Transmit data valid
+*        TCP0_TxReady    => eth_ctl(3), --Transmit data ready
+*        TCP0_RxValid    => eth_ctl(2), --Receive data valid
+*        TCP0_RxReady    => eth_ctl(5)  --Receive data ready
+
+TXVL = 6
+TXRDY = 3
+RXVLD = 2
+RXRDY = 5
+
 * EQUATES (in alphabetical order)
 
 BELL     =       0x07
@@ -455,11 +471,11 @@ LDATA    =       0xFFFFFFC4     | DS.B    1
 *-------------------------------------------------------------------------
 * File B         Init Vectors+Ram                                 05/29/82
 
-         .ORG    0x008000
+         .ORG    0x001000
 
          REGA7 =  0x444
 FIRST:   DC.L    REGA7          | SUPERVISOR STACK
-         START = 0x8146
+         START = 0x1146
          DC.L    START          | PROGRAM COUNTER
 V2:      BRA     TRACE
 
@@ -718,8 +734,8 @@ START11: MOVE.W  #0x2700,%SR     | MASK OFF INTERRUPTS
          AV46 = 0x00b8
          ADDR2MEM  TRAP14,AV46
          CTLINK = 0x0656
-*        MOVE.L  #(254<<24)+CT,CTLINK
-         MOVE.L  #0xfe00bf14,CTLINK
+*         MOVE.L  #(254<<24)+CT,CTLINK
+         MOVE.L  #0xfe004f0e,CTLINK
 
 ************************************************************************
 *                    V E R S I O N   N U M B E R   A N D   P R O M P T *
@@ -830,7 +846,7 @@ NOCMD:   MOVEQ   #-4,%D3        | SET "NO" SWITCH
 * File COMMANDS  Command list                                     06/20/82
 
 MSG001:  DC.B    CR,LF
-         .ascii  "TUTOR  1.3 "
+         .ascii  "MERLIN 1.3 "
          DC.B    EOT            | "PROMPT"
 
 *******************************************************
@@ -2464,7 +2480,7 @@ READ0:   LEA     SYSTACK,%A7    | FORCE STACK (FOR ERROR RECOVERY)
          CLR.B   %D5            | ZERO CHECKSUM
 
          BSR     FIXBUF         | START OF INPUT BUFFER
-         BSR     PORTIN2        | GET A RECORD FROM PORT
+         BSR     PORTIN1        | GET A RECORD FROM PORT
 
          MOVE.L  %A5,%A3        | START ADDRESS OF BUFFER
 READ00:  MOVE.B  (%A3)+,%D0     | GET FIRST CHARACTER
@@ -4283,30 +4299,13 @@ MSG007:  DC.B    CR,LF
 *
 *       SEND CHARACTER IN D0.B TO SERIAL PORT IN (%A0) (NO NULL PADS)
 *
-OUTCH:   BSR.S   CHKBRK         | CHECK FOR BREAK
-         MOVE.B  (%A0),%D1      | READ STATUS AGAIN
-         ANDI.B  #0x2,%D1       | CHECK FOR READY TO SEND
-         BEQ.S   OUTCH          | STILL NOT READY
-         MOVE.B  %D0,2(%A0)     | SEND CHARACTER  ****************
+OUTCH:    BTST.B #TXRDY,DATA_CTL.L
+          BEQ.S  OUTCH
 
-* IF PRINT FLAG SET GOTO PRINTER
-         BEQ.S   OUTCH21        | NULL; IGNORE SENDING TO PRINTER
-         TST.W   CRTPNT
-         BEQ.S   OUTCH21        | CRT ONLY
-         BSR     CHRPRINT       | GOTO PRINTER
-OUTCH21: .align  2
+          MOVE.B %D0,DATA_TX.L 
+          BSET.B #TXVL,DATA_CTL.L
+          BCLR.B #TXVL,DATA_CTL.L 
 
-*   CHECK FOR CONTROL W
-         MOVE.B  (%A0),%D1      | READ STATUS
-         ANDI.B  #1,%D1
-         BEQ.S   CTLW9          | CHAR NOT READY
-         MOVE.B  2(%A0),%D1     | READ CHARACTER
-         CMPI.B  #CTLW,%D1
-         BNE.S   CTLW9          | NOT CNTL/W
-CTLWH:   BSR.S   CHKBRK         | CHECK FOR BREAK
-         MOVE.B  (%A0),%D1      | READ STATUS
-         ANDI.B  #1,%D1
-         BEQ.S   CTLWH          | WAIT FOR ANY CHAR TO CONTINUE
 CTLW9:   RTS
 *
 *   CHECK FOR BREAK ON PORT #1
@@ -4460,15 +4459,13 @@ INITAC3: SUBQ.L  #1,%D0         | LOOP AROUND
 *    ACIA ADDRESS IN (%A0)
 *
 
-INCHNE:  MOVE.B  (%A0),%D1      | (INCH NO ECHO) LOAD STATUS SIDE
-         ANDI.B  #0x10,%D1      |              CHECK FOR BREAK
-         BNE     BREAK          |              GO PROCESS IT
+INCHNE:  BTST.B #RXVLD,DATA_CTL.L
+         BEQ.S  INCHNE
 
-         MOVE.B  (%A0),%D1      | LOAD STATUS SIDE
-         ANDI.B  #1,%D1         | SEE IF READY
-         BEQ.S   INCHNE         | IF NOT READY
-         MOVE.B  2(%A0),%D0     | READ DATA SIDE   *****************
-         ANDI.B  #0x7F,%D0      |  DROP PARITY BIT
+         BSET.B #RXRDY,DATA_CTL.L
+         MOVE.B DATA_RX,%D0
+         BCLR.B #RXRDY,DATA_CTL.L
+
          RTS
 
 *  INPUT A LINE FROM PORT2 (ACIA2)
@@ -8169,12 +8166,12 @@ OPCTBL:  .align  2
 *        CALLING SEQUENCE
 *                  %D7 = XXXXXXFF   WHERE "FF" IF FUNCTION NUMBER
 *                  TRAP      #14
-
 TRAP14:
          MOVEM.L %D1/%D7/%A1-%A2,-(%A7)
 
-         MOVE.L  CTLINK,%A1
-T100:    MOVE.B  (%A1),%D1      | D1 = FUNCTION FROM TABLE
+         LEA.L  CTLINK,%A1
+T100:    MOVE.L  (%A1),%D1      | D1 = FUNCTION FROM TABLE
+         ROL.L #8,%D1
          CMPI.B  #0xFF,%D1
          BEQ.S   T500           | END OF TABLE
 
@@ -8184,7 +8181,7 @@ T100:    MOVE.B  (%A1),%D1      | D1 = FUNCTION FROM TABLE
          CMP.B   %D7,%D1
          BEQ.S   T400           | FOUND MATCH
 
-         ADDQ.L  #4,%A1
+NEXT:    ADDQ.L  #4,%A1
          BRA.S   T100
 
 T400:    MOVE.L  (%A1),%D1      | FFAAAAAA
@@ -8246,7 +8243,7 @@ T500:    MOVEM.L (%A7)+,%D1/%D7/%A1/%A2
 MSGT14:  .ascii  "UNDEFINED TRAP 14"
          DC.B    EOT
 
-T600:    MOVE.L  (%A1),%A1
+T600:    MOVE.L  #0X4F0E,%A1
          BRA     T100
 
 T700:    .align  2              | 253 APPEND NEW TABLE
@@ -8271,68 +8268,68 @@ FADDR:   .MACRO   a1,a2
 
 CT:
 *        FADDR   253,T700       | APPEND NEW TABLE
-         DC.L    0xFD00BF00
+         DC.L    0xFD004EFA
 *        FADDR   252,FIXDADD    | APPEND DATA (A5) TO BUFFER (A6)+
-         DC.L    0xFC0080F6
+         DC.L    0xFC0010F6
 *        FADDR   251,FIXBUF     | SET A5 & A6 AS POINTERS TO BUFFER
-         DC.L    0xFB009C96
+         DC.L    0xFB002C96
 *        FADDR   250,FIXDATA    | MOVE DATA (A5) TO BUFFER; A5=BUFFER A6
-         DC.L    0xFA0080F2
+         DC.L    0xFA0010F2
 *        FADDR   249,FIXDCRLF
-         DC.L    0xF9008106
+         DC.L    0xF9001106
 *        FADDR   248,F100       | OUTPUT CHAR PORT1  D0=CHAR
-         DC.L    0xF800BF88
+         DC.L    0xF8004F86
 *        FADDR   247,F110       | INPUT CHAR PORT1  D0=CHAR
-         DC.L    0xF700BF90
+         DC.L    0xF7004F8A
 *        FADDR   244,CHRPRINT   | OUTPUT CHAR PORT3 D0=CHAR
-         DC.L    0xF4009D7A
+         DC.L    0xF4002D7A
 *        FADDR   243,OUTPUT     | OUTPUT STRING PORT1 (A5) (A6)
-         DC.L    0xF3009C0A
+         DC.L    0xF3002C0A
 *        FADDR   242,OUTPUT21   | OUTPUT STRING PORT2 (A5) (A6)
-         DC.L    0xF2009C2A
+         DC.L    0xF2002C2A
 *        FADDR   241,PORTIN1    | INPUT STRING PORT1  (A5) (A6)
-         DC.L    0xF1009C9E
+         DC.L    0xF1002C9E
 *        FADDR   240,PORTIN20   | INPUT STRING PORT2  (A5) (A6)
-         DC.L    0xF0009FD4
+         DC.L    0xF0002FD4
 *        FADDR   239,TAPEOUT    | OUTPUT STRING TO PORT4 (A5) (A6)
-         DC.L    0xEF009E9C
+         DC.L    0xEF002E9C
 *        FADDR   238,TAPEIN     | INPUT STRING FROM PORT4 (A5) (A6)
-         DC.L    0xEE00A09C
+         DC.L    0xEE00309C
 *        FADDR   237,PRCRLF     | OUTPUT STRING TO PORT3 (A5) (A6)
-         DC.L    0xED009D66
+         DC.L    0xED002D66
 *        FADDR   236,HEX2DEC    | CONVERT HEX D0 TO DECIMAL (A6)+
-         DC.L    0xEC008F5C
+         DC.L    0xEC001F5C
 *        FADDR   235,GETHEX     | GET HEX CHAR INTO D0 FROM (A5)+
-         DC.L    0xEB009BA6
+         DC.L    0xEB002BA6
 *        FADDR   234,PUTHEX     | FORMAT HEX CHAR FROM D0 TO (A6)+
-         DC.L    0xEA0099C0
+         DC.L    0xEA0029C0
 *        FADDR   233,PNT2HX     | FORMAT 2 HEX CHAR FROM D0 TO (A6)+
-         DC.L    0xE90099B8
+         DC.L    0xE90029B8
 *        FADDR   232,PNT4HX     | FORMAT 4 HEX CHAR FROM D0 TO (A6)+
-         DC.L    0xE80099B0
+         DC.L    0xE80029B0
 *        FADDR   231,PNT6HX     | FORMAT 6 HEX CHAR FROM D0 TO (A6)+
-         DC.L    0xE70099AA
+         DC.L    0xE70029AA
 *        FADDR   230,PNT8HX     | FORMAT 8 HEX CHAR FROM D0 TO (A6)+
-         DC.L    0xE60099A2
+         DC.L    0xE60029A2
 *        FADDR   229,START      | RESTART TUTOR INITIALIZE EVERYTHING
-         DC.L    0xE5008146
+         DC.L    0xE5001146
 *        FADDR   228,MACSBUG    | GOTO TUTOR;   PRINT PROMPT
-         DC.L    0xE4008232
+         DC.L    0xE4001232
 *        FADDR   227,F120       | OUTPUT STRING,CR,LF PORT1 (A5) (A6)
-         DC.L    0xE300BF98
+         DC.L    0xE3004F8E
 *        FADDR   226,GETNUMA    | GET HEX NUMBER (A5)+ INTO D0
-         DC.L    0xE2009AF6
+         DC.L    0xE2002AF6
 *        FADDR   225,GETNUMD    | GET DECIMAL NUMBER (A5)+ INTO D0
-         DC.L    0xE1009AEE
+         DC.L    0xE1002AEE
 *        FADDR   224,PORTIN1N   | INPUT STRING PORT1 (NO AUTO LF)
-         DC.L    0xE0009CB0
+         DC.L    0xE0002CB0
 *        FADDR   255,0xFFFFFF   | END KEY
          DC.L    0xFFFFFFFF
 
-F100:    BSR     GETSER1        | A0 = PORT1 ADDRESS
+F100:    *BSR     GETSER1        | A0 = PORT1 ADDRESS
          BRA     OUTCH
 
-F110:    BSR     GETSER1        | A0 = PORT1 ADDRESS
+F110:    *BSR     GETSER1        | A0 = PORT1 ADDRESS
          BRA     INCHNE
 
 F120:    BSR     OUTPUT         | OUTPUT STRING,CR,LF PORT1 (A5) (A6)

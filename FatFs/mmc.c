@@ -45,7 +45,7 @@ static unsigned char response;
 static unsigned char CardType;
 
 // internal functions
-static void MMC_CRC(unsigned char c)  ;
+static void MMC_CRC(unsigned char c);
 
 /*
 SDADDRESS EQU $F40022  ;LONG (32BIT)
@@ -83,7 +83,7 @@ volatile DWORD *sd_address = (DWORD *)0xf40022;
 #define CARDTYPE_SD 2
 #define CARDTYPE_SDHC 3
 
-  unsigned char MMC_CheckCard()
+unsigned char MMC_CheckCard()
 {
     // check for removal of card
     if ((CardType != CARDTYPE_NONE))
@@ -94,7 +94,7 @@ volatile DWORD *sd_address = (DWORD *)0xf40022;
     return 1;
 }
 
-static   char check_card()
+static char check_card()
 {
 
     MMC_CheckCard();
@@ -130,7 +130,7 @@ void EnableReadCard(int multi)
 
     while (BIT_CHECK(status, SD_BUSY) == true)
     {
-       // printf(":");
+        printf(":");
         status = *sd_status >> 8;
     }
 
@@ -150,7 +150,7 @@ void DisableReadCard(int multi)
 }
 
 // Read single 512-byte block
-  unsigned char MMC_Read(unsigned long lba, unsigned char *pReadBuffer)
+unsigned char MMC_Read(unsigned long lba, unsigned char *pReadBuffer)
 {
     // if pReadBuffer is NULL then use direct to the FPGA transfer mode (FPGA2 asserted)
 
@@ -166,7 +166,7 @@ void DisableReadCard(int multi)
 
     WORD status = *sd_status >> 8;
 
-    // printf("\r\r\nInitial status: %0X\r\n", status);
+    //printf("\r\r\nInitial status: %0X\r\n", status);
     if (status != 0xc0)
     {
 
@@ -175,7 +175,7 @@ void DisableReadCard(int multi)
         status = *sd_status >> 8;
         while (BIT_CHECK(status, SD_DATA_AVAIL) == true)
         {
-            // printf("\r\nInitial status: %0X\r\n", status);
+            //printf("\r\nInitial status: %0X\r\n", status);
             status = *sd_status >> 8;
         }
 
@@ -192,8 +192,15 @@ void DisableReadCard(int multi)
         status = *sd_status >> 8;
         while (BIT_CHECK(status, SD_DATA_AVAIL) == false)
         {
-            // printf("\r\ndata status: %0X\r\n", status);
-            // printf("-");
+
+            if (BIT_CHECK(status, SD_ERROR) == true)
+            {
+                printf("\r\nError!\r\n");
+                BIT_CLEAR(*sd_control, SD_READ_EN);
+                BIT_CLEAR(*sd_control, SD_DOUT_ACK);
+                asm("jmp 0xe00bc0");
+            }
+
             status = *sd_status >> 8;
         }
 
@@ -240,7 +247,7 @@ unsigned char MMC_ReadMultiple(unsigned long lba, unsigned char *pReadBuffer, un
 
     WORD status = *sd_status >> 8;
 
-    // printf("\r\nInitial status: %0X\r\n", status);
+    //printf("\r\nInitial status: %0X\r\n", status);
     if (status != 0xc0)
     {
 
@@ -249,7 +256,7 @@ unsigned char MMC_ReadMultiple(unsigned long lba, unsigned char *pReadBuffer, un
         status = *sd_status >> 8;
         while (BIT_CHECK(status, SD_DATA_AVAIL) == true)
         {
-            // printf("\r\nInitial status: %0X\r\n", status);
+            //printf("\r\nInitial status: %0X\r\n", status);
             status = *sd_status >> 8;
         }
 
@@ -268,8 +275,13 @@ unsigned char MMC_ReadMultiple(unsigned long lba, unsigned char *pReadBuffer, un
             status = *sd_status >> 8;
             while (BIT_CHECK(status, SD_DATA_AVAIL) == false)
             {
-                // printf("\r\ndata status: %0X\r\n", status);
-                // printf("-");
+                if (BIT_CHECK(status, SD_ERROR) == true)
+                {
+                    printf("\r\nError!\r\n");
+                    BIT_CLEAR(*sd_control, SD_READ_EN);
+                    BIT_CLEAR(*sd_control, SD_DOUT_ACK);
+                    asm("jmp 0xe00bc0");
+                }
                 status = *sd_status >> 8;
             }
 
@@ -354,20 +366,20 @@ unsigned char MMC_Write(unsigned long lba, const unsigned char *pWriteBuffer)
         }
 
         BIT_CLEAR(*sd_control, SD_DIN_VALID);
-    //    printf(".");
+        //    printf(".");
 
         wc--;
     }
 
     // Finalize write process
-   // printf("\r\nDisabled\r\n");
+    printf("\r\nDisabled\r\n");
     BIT_CLEAR(*sd_control, SD_WRITE_EN);
 
     return 1;
 }
 
 // MMC CRC calc
-static   void MMC_CRC(unsigned char c)
+static void MMC_CRC(unsigned char c)
 {
     unsigned char i;
 

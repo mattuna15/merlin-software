@@ -272,12 +272,11 @@ double __wrap_sqrt(double a)
   *opb = op_b.num;
 
   BIT_SET(*fpu_ctl, 0); //enable
+    BIT_CLEAR(*fpu_ctl, 0);
 
   while (!BIT_CHECK(*fpu_sts, 0))
   {
   }
-
-  BIT_CLEAR(*fpu_ctl, 0);
 
    //printf("\r\nsqrt: stop\r\n");
 
@@ -403,65 +402,4 @@ double __wrap_tan(double a)
 
   return resf.dbl;
 
-}
-
-void double_to_string(double f, char *str, uint8_t precision)
-{
-  int a, b, c, k, l = 0, m, i = 0;
-
-  // check for negetive float
-  if (f < 0.0)
-  {
-
-    str[i++] = '-';
-    f *= -1;
-  }
-
-  a = f;  // extracting whole number
-  f -= a; // extracting decimal part
-  k = 0;
-
-  // number of digits in whole number
-  while (1)
-  {
-    l = pow(10, k);
-    m = a / l;
-    if (m == 0)
-    {
-      break;
-    }
-    k++;
-  }
-  k--;
-  // number of digits in whole number are k+1
-
-  /*
-extracting most significant digit i.e. right most digit , and concatenating to string
-obtained as quotient by dividing number by 10^k where k = (number of digit -1)
-*/
-
-  for (l = k + 1; l > 0; l--)
-  {
-    b = pow(10, l - 1);
-    c = a / b;
-    str[i++] = c + 48;
-    a %= b;
-  }
-  if (precision != 0)
-    str[i++] = '.';
-
-  /* extracting decimal digits till precision */
-
-  for (l = 0; l < precision; l++)
-  {
-    f *= 10.0;
-    b = f;
-    str[i++] = b + 48;
-    f -= b;
-  }
-
-  str[i] = '\0';
-
-  // //printf("\n orignal  //printf %f\n",ff);
-  // //printf("\n float string %s\n",str);
 }

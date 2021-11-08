@@ -37,15 +37,6 @@
 * Ver 3.45 makes the handling of non existant variables consistent and gives the
 * option of not returning an error for a non existant variable. If this is the
 * behaviour you want just change novar to some non zero value
-	XDEF EnableInterrupts
-	XDEF DisableInterrupts
-	XDEF IntHandler1
-	XDEF IntHandler2
-	XDEF IntHandler3
-	XDEF IntHandler4
-	XDEF IntHandler5
-	XDEF IntHandler6
-	XDEF IntHandler7
 	XDEF main
 
 *// void gd_begin();
@@ -113,7 +104,7 @@ nobrk		EQU	0				* null response to INPUT causes a break
 
 *	OFFSET	0			* start of RAM
 
-ram_strt	ds.l	$3A00		* allow 1K for the stack, this should be plenty
+ram_strt	ds.l	$1f00		* allow 1K for the stack, this should be plenty
 					* for any BASIC program that doesn't do something
 					* silly, it could even be much less.
 ram_base
@@ -325,28 +316,14 @@ bitmapBlendSrc ds.l 1
 bitmapBlendDst ds.l 1
 gfxText		ds.l 1
 gfxTextLen	ds.W 1
+memStart	ds.l 1
+memEnd		ds.l 1
 
 		dc.w	0		* dummy even value and zero pad byte
 
 main
 	jsr initDrive
 	jsr gd_begin
-
-	; Set up interrupt vectors...
-	lea	.int1,a0
-	move.l	a0,$64
-	lea	.int2,a0
-	move.l	a0,$68
-	lea	.int3,a0
-	move.l	a0,$6C
-	lea	.int4,a0
-	move.l	a0,$70
-	lea	.int5,a0
-	move.l	a0,$74
-	lea	.int6,a0
-	move.l	a0,$78
-	lea	.int7,a0
-	move.l	a0,$7C
 
 prg_strt
 
@@ -2380,6 +2357,20 @@ LAB_BITMAP
 
 	RTS
 
+**************************
+* MEM
+
+LAB_MEM
+		BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
+
+		SUBQ.w	#2,d1			
+		BNE		LAB_SNER
+
+		move.l  (sp)+,memEnd(a3)
+		move.l  (sp)+,memStart(a3)
+
+		RTS
+
 *************************************************************************************
 *
 * VLOAD -> gd
@@ -2401,6 +2392,63 @@ LAB_VLOAD
 	pea gfxText(a3)
 	jsr gd_load_bitmapfile
 	add #8,sp
+
+	MOVEM.L  (A7)+,A0-A2/D0-D7    * Restore working registers
+
+	rts
+
+*************************************************************************************
+*
+* BLOAD -> gd
+* void gd_load_bitmapfile(uint32_t *filename, uint32_t *flen) 
+
+LAB_BLOAD
+
+	MOVEM.L  A0-A2/D0-D7,-(A7)    * Save working registers
+
+	BSR		LAB_EVEX			* evaluate expression
+	BSR		LAB_GBYT			* scan memory
+	BNE		LAB_SNER			* if not [EOL] or [EOS] do syntax error and
+						* warm start
+
+	MOVE.l	(a4)+,gfxText(a3)			* string address from descriptor stack
+	MOVE.w	(a4)+,gfxTextLen(a3)			* string length from descriptor stack
+
+	pea memStart(a3)
+	pea gfxTextLen(a3)
+	pea gfxText(a3)
+	pea load_cwd(a3)
+	jsr bload
+	add #16,sp
+
+	MOVEM.L  (A7)+,A0-A2/D0-D7    * Restore working registers
+
+	rts
+
+*************************************************************************************
+*
+* BSAVE-> gd
+* void gd_load_bitmapfile(uint32_t *filename, uint32_t *flen) 
+
+LAB_BSAVE
+
+	MOVEM.L  A0-A2/D0-D7,-(A7)    * Save working registers
+
+	BSR		LAB_EVEX			* evaluate expression
+	BSR		LAB_GBYT			* scan memory
+	BNE		LAB_SNER			* if not [EOL] or [EOS] do syntax error and
+						* warm start
+
+	MOVE.l	(a4)+,gfxText(a3)			* string address from descriptor stack
+	MOVE.w	(a4)+,gfxTextLen(a3)			* string length from descriptor stack
+
+	pea memEnd(a3)
+	pea memStart(a3)
+	pea gfxTextLen(a3)
+	pea gfxText(a3)
+	pea load_cwd(a3)
+	jsr blsave
+	add #20,sp
 
 	MOVEM.L  (A7)+,A0-A2/D0-D7    * Restore working registers
 
@@ -8741,8 +8789,11 @@ TK_LINEC	EQU TK_GDPRINT+1
 TK_FILLC	EQU TK_LINEC+1
 TK_VLOAD	EQU TK_FILLC+1
 TK_BITMAP	EQU TK_VLOAD+1
+TK_MEM		EQU TK_BITMAP+1
+TK_BLOAD	EQU TK_MEM+1
+TK_BSAVE	EQU TK_BLOAD+1
 
-TK_LIST		EQU TK_BITMAP+1		* $A0
+TK_LIST		EQU TK_BSAVE+1		* $A0
 TK_CLEAR		EQU TK_LIST+1		* $A1
 TK_NEW		EQU TK_CLEAR+1		* $A2
 TK_WIDTH		EQU TK_NEW+1		* $A3
@@ -9174,6 +9225,10 @@ LAB_CTBL
 	dc.w 	LAB_VLOAD-LAB_CTBL
 	dc.w 	LAB_BITMAP-LAB_CTBL
 
+	dc.w 	LAB_MEM-LAB_CTBL
+	dc.w 	LAB_BLOAD-LAB_CTBL
+	dc.w 	LAB_BSAVE-LAB_CTBL
+
 	dc.w	LAB_LIST-LAB_CTBL			* LIST
 	dc.w	LAB_CLEAR-LAB_CTBL		* CLEAR
 	dc.w	LAB_NEW-LAB_CTBL			* NEW
@@ -9503,6 +9558,12 @@ LAB_KEYT
 	dc.w 	KEY_VLOAD-TAB_STAR
 	dc.b	'B',4
 	dc.w 	KEY_BITMAP-TAB_STAR
+	dc.b	'M',1
+	dc.w 	KEY_MEM-TAB_STAR
+	dc.b	'B',3
+	dc.w 	KEY_BLOAD-TAB_STAR
+	dc.b	'B',3
+	dc.w 	KEY_BSAVE-TAB_STAR
 
 	dc.b	'L',2
 	dc.w	KEY_LIST-TAB_STAR			* LIST
@@ -9761,6 +9822,10 @@ KEY_BITSET
 	dc.b	'ITSET',TK_BITSET			* BITSET
 KEY_BITTST
 	dc.b	'ITTST(',TK_BITTST		* BITTST(
+KEY_BLOAD
+	dc.b	'LOAD',TK_BLOAD		* BITTST(
+KEY_BSAVE
+	dc.b	'SAVE',TK_BSAVE		* BITTST(
 	dc.b	$00
 TAB_ASCC
 KEY_CALL
@@ -9882,6 +9947,8 @@ KEY_LOOP
 TAB_ASCM
 KEY_MAX
 	dc.b	'AX(',TK_MAX			* MAX(
+KEY_MEM
+	dc.b	'EM',TK_MEM			* MAX(
 KEY_MIDS
 	dc.b	'ID$(',TK_MIDS			* MID$(
 KEY_MIN
@@ -10030,71 +10097,6 @@ LAB_SMSG
 	dc.b	'GCC Enhanced 68k BASIC for Merlin V3.7 2021, FATFS & GD extensions',$0D,$0A,$00
 
 
-.int1:
-	MOVEM D0-D7/A0-A6,-(SP)	; Preserve scratch registers
-	pea	.intend1	; A stub to restore the scratch registers
-	move.l	IntHandler1,-(a7)	; equivalent to move.l IntHandler1,reg; jmp reg - without using registers
-	rts
-
-.int2:
-	MOVEM D0-D7/A0-A6,-(SP)	; Preserve scratch registers
-	pea	.intend1
-	move.l	IntHandler2,-(a7)
-	rts
-
-.int3:
-	MOVEM D0-D7/A0-A6,-(SP); Preserve scratch registers
-	pea	.intend1
-	move.l	IntHandler3,-(a7)
-	rts
-
-.int4:
-	MOVEM D0-D7/A0-A6,-(SP)	; Preserve scratch registers
-	pea	.intend1
-	move.l	IntHandler4,-(a7)
-	rts
-
-.int5
-	MOVEM D0-D7/A0-A6,-(SP)	; Preserve scratch registers
-	pea	.intend1
-	move.l	IntHandler5,-(a7)
-	rts
-
-.int6
-	MOVEM D0-D7/A0-A6,-(SP)	; Preserve scratch registers
-	pea	.intend1
-	move.l	IntHandler6,-(a7)
-	rts
-
-.int7
-	MOVEM D0-D7/A0-A6,-(SP); Preserve scratch registers
-	pea	.intend1
-	move.l	IntHandler7,-(a7)
-	rts
-
-.intend1
-	movem.l	(a7)+,d0-d7/a0-a6
-	rte
-
-DummyIntHandler
-	rts
-
-EnableInterrupts ; FIXME - use a trap or suchlike to make this happen even if we're in user mode.
-	move.w	#$2000,SR
-	rts
-
-DisableInterrupts
-	move.w	#$2700,SR
-	rts
-
-; Interrupt handler table, modified by C code.
-IntHandler1	dc.l	DummyIntHandler
-IntHandler2 dc.l	DummyIntHandler
-IntHandler3 dc.l	DummyIntHandler
-IntHandler4 dc.l	DummyIntHandler
-IntHandler5 dc.l	DummyIntHandler
-IntHandler6 dc.l	DummyIntHandler
-IntHandler7 dc.l	DummyIntHandler
 
 *************************************************************************************
 * EhBASIC keywords quick reference list								*

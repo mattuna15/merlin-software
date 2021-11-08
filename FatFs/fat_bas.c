@@ -139,3 +139,82 @@ FRESULT cd(char *directory)
 
     return res;
 }
+
+FRESULT bload(char *cwd, char *filename, uint16_t *startaddress)
+{
+    FIL file;
+    char fullName[256] = {0};
+
+    if (strcmp("/", cwd) == 0)
+        sprintf(fullName, "%s", filename);
+    else
+        sprintf(fullName, "/%s/%s", cwd, filename);
+
+    FRESULT res = f_open(&file, fullName, FA_OPEN_EXISTING | FA_READ);
+    if (res != FR_OK)
+    {
+        printf("\r\n%s - not found - %d\r\n", fullName, res);
+        return res;
+    }
+    char buf[512];
+    UINT n;
+
+    printf("\r\n");
+    res = f_read(&file, buf, 512, &n);
+    while (n > 0)
+    {
+
+        for (int i = 0; i < (n - 1); i = i + 2)
+        {
+
+            uint16_t result = (((uint16_t)(buf[i] & 0xFF) << 8) | (buf[i + 1] & 0xFF) & 0xffff);
+
+            *startaddress++ = result;
+        }
+
+        res = f_read(&file, buf, 512, &n);
+        if (res != FR_OK)
+        {
+            printf("Error - %d\r\n", res);
+            return res;
+        }
+
+        printf(".");
+    }
+    f_close(&file);
+    printf("\r\n");
+    return 1;
+}
+
+int blsave(char *cwd, char *filename, uint16_t *startaddress, uint16_t *endaddress)
+{
+    char fullName[256] = {0};
+    if (strcmp("/", cwd) == 0)
+        sprintf(fullName, "%s", filename);
+    else
+        sprintf(fullName, "/%s/%s", cwd, filename);
+
+    FRESULT res = f_open(&file, fullName, FA_CREATE_ALWAYS | FA_WRITE);
+
+    if (res != FR_OK)
+    {
+        printf("\r\nFile not found Error.\r\n\r\n");
+        return res;
+    }
+
+    uint32_t programlen = endaddress - startaddress;
+
+    UINT bw;
+
+    res = f_write(&file, startaddress, programlen, &bw);
+    if (res != FR_OK)
+    {
+        printf("Error - %d\r\n", res);
+        return res;
+    }
+
+    f_close(&file);
+    printf("\r\n");
+
+    return bw;
+}
