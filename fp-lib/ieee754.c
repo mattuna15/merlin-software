@@ -54,7 +54,7 @@ union FloatingPointIEEE754f float_res;
 double __wrap___extendsfdf2(float a)
 {
 
-   //printf("\r\next: start\r\n");
+  //printf("\r\next: start\r\n");
 
   *fpu_ctl = SDBL;
 
@@ -66,13 +66,13 @@ double __wrap___extendsfdf2(float a)
   BIT_SET(*fpu_ctl, 0); //enable
   BIT_CLEAR(*fpu_ctl, 0);
 
-  while (!BIT_CHECK(*fpu_sts, 0) && !BIT_CHECK(*fpu_sts, 1))
+  while (!BIT_CHECK(*fpu_sts, 1))
   {
   }
 
   resf.num = *fpu_res; 
 
-   //printf("\r\nnext: stop\r\n");
+  //printf("\r\nnext: stop\r\n");
 
 
   return resf.dbl;
@@ -81,7 +81,7 @@ double __wrap___extendsfdf2(float a)
 float __wrap___truncdfsf2(double a)
 {
 
-   //printf("\r\ntrunc: start\r\n");
+  //printf("\r\ntrunc: start\r\n");
 
   *fpu_ctl = DSGL;
 
@@ -95,14 +95,12 @@ float __wrap___truncdfsf2(double a)
     BIT_CLEAR(*fpu_ctl, 0);
 
 
-  while (!BIT_CHECK(*fpu_sts, 0) && !BIT_CHECK(*fpu_sts, 1))
+  while (!BIT_CHECK(*fpu_sts, 1))
   {
   }
 
   float_res.numf = *fpu_res;
-
-
-   //printf("\r\ntrunc: stop\r\n");
+  //printf("\r\ntrunc: stop\r\n");
 
   return float_res.flt;
 }
@@ -110,9 +108,7 @@ float __wrap___truncdfsf2(double a)
 double __wrap___muldf3(double a, double b)
 {
 
-   
-
-   //printf("\r\nmuldf3: start\r\n");
+  //printf("\r\nMUL\r\n");
 
   *fpu_ctl = MUL;
 
@@ -123,13 +119,11 @@ double __wrap___muldf3(double a, double b)
   *opb = op_b.num;
 
   BIT_SET(*fpu_ctl, 0); //enable
-    BIT_CLEAR(*fpu_ctl, 0);
+  BIT_CLEAR(*fpu_ctl, 0);
 
-  while (!BIT_CHECK(*fpu_sts, 0) )
+  while (!BIT_CHECK(*fpu_sts, 1) )
   {
   }
-
-   //printf("\r\nmuldf3: stop\r\n");
 
   resf.num = *fpu_res;
 
@@ -139,11 +133,7 @@ double __wrap___muldf3(double a, double b)
 
 double __wrap___adddf3(double a, double b)
 {
-
-    
-
-   //printf("\r\nadddf3: start\r\n");
-
+  //printf("\r\nADD\r\n");
   *fpu_ctl = ADD;
 
   op_a.dbl = a;
@@ -153,29 +143,24 @@ double __wrap___adddf3(double a, double b)
   *opb = op_b.num;
 
   BIT_SET(*fpu_ctl, 0); //enable
-    BIT_CLEAR(*fpu_ctl, 0);
 
-  while (!BIT_CHECK(*fpu_sts, 0)   && !BIT_CHECK(*fpu_sts, 1))
+  BIT_CLEAR(*fpu_ctl, 0);
+
+    while (!BIT_CHECK(*fpu_sts, 1))
   {
   }
 
-
-
-   //printf("\r\nadddf3: stop\r\n");
-
   resf.num = *fpu_res;
 
+  //printf("\r\nend ADD\r\n");
+
   return resf.dbl;
-
-
 }
 
 double __wrap___subdf3(double a, double b)
 {
-  
-    
 
-   //printf("\r\nsubdf3: start\r\n");
+    //printf("\r\nSUB\r\n");
 
   *fpu_ctl = SUB;
 
@@ -188,12 +173,9 @@ double __wrap___subdf3(double a, double b)
   BIT_SET(*fpu_ctl, 0); //enable
     BIT_CLEAR(*fpu_ctl, 0);
 
-  while (!BIT_CHECK(*fpu_sts, 0) && !BIT_CHECK(*fpu_sts, 1))
+  while (!BIT_CHECK(*fpu_sts, 1))
   {
   }
-
-
-   //printf("\r\nsubdf3: stop\r\n");
 
   resf.num = *fpu_res;
 
@@ -206,7 +188,7 @@ double __wrap___subdf3(double a, double b)
 double __wrap___divdf3(double a, double b)
 {
 
-   //printf("\r\ndivdf3: start\r\n");
+  //printf("\r\ndivdf3: start\r\n");
 
   *fpu_ctl = DIV;
 
@@ -217,13 +199,11 @@ double __wrap___divdf3(double a, double b)
   *opb = op_b.num;
 
   BIT_SET(*fpu_ctl, 0); //enable
-    BIT_CLEAR(*fpu_ctl, 0);
+  BIT_CLEAR(*fpu_ctl, 0);
 
-  while (!BIT_CHECK(*fpu_sts, 0) && !BIT_CHECK(*fpu_sts, 1))
+  while (!BIT_CHECK(*fpu_sts, 1))
   {
   }
-
-   //printf("\r\ndivdf3: stop\r\n");
 
   resf.num = *fpu_res;
 
@@ -231,37 +211,11 @@ double __wrap___divdf3(double a, double b)
 
 }
 
-double __wrap_pow(double a, double b)
-{
-
-   //printf("\r\npow: start\r\n");
-
-  *fpu_ctl = POW;
-
-  op_a.dbl = a;
-  op_b.dbl = b;
-
-  *opa = op_a.num;
-  *opb = op_b.num;
-
-  BIT_SET(*fpu_ctl, 0); //enable
-
-  while (!BIT_CHECK(*fpu_sts, 0))
-  {
-  }
-
-   //printf("\r\npow: stop\r\n");
-
-  resf.num = *fpu_res;
-
-  return resf.dbl;
-
-}
 
 double __wrap_sqrt(double a)
 {
 
-   //printf("\r\nsqrt: start\r\n");
+    //printf("\r\nsqr\r\n");
 
   *fpu_ctl = SQRT;
 
@@ -274,129 +228,9 @@ double __wrap_sqrt(double a)
   BIT_SET(*fpu_ctl, 0); //enable
     BIT_CLEAR(*fpu_ctl, 0);
 
-  while (!BIT_CHECK(*fpu_sts, 0))
+  while (!BIT_CHECK(*fpu_sts, 1))
   {
   }
-
-   //printf("\r\nsqrt: stop\r\n");
-
-  resf.num = *fpu_res;
-
-  return resf.dbl;
-
-}
-
-double __wrap_exp(double a)
-{
-
-   //printf("\r\nexp: start\r\n");
-
-  *fpu_ctl = EXP;
-
-  op_a.dbl = a;
-  op_b.dbl = 0x0;
-
-  *opa = op_a.num;
-  *opb = op_b.num;
-
-  BIT_SET(*fpu_ctl, 0); //enable
-
-  while (!BIT_CHECK(*fpu_sts, 0) && !BIT_CHECK(*fpu_sts, 1))
-  {
-  }
-
-  BIT_CLEAR(*fpu_ctl, 0);
-
-   //printf("\r\nexp: stop\r\n");
-
-  resf.num = *fpu_res;
-
-  return resf.dbl;
-
-}
-
-double __wrap_sin(double a)
-{
-
-      
-
-   //printf("\r\nsin: start\r\n");
-
-  *fpu_ctl = SIN;
-
-  op_a.dbl = a;
-  op_b.dbl = 0x0;
-
-  *opa = op_a.num;
-  *opb = op_b.num;
-
-  BIT_SET(*fpu_ctl, 0); //enable
-
-  while (!BIT_CHECK(*fpu_sts, 0) && !BIT_CHECK(*fpu_sts, 1))
-  {
-  }
-
-  BIT_CLEAR(*fpu_ctl, 0);
-
-   //printf("\r\nsin: stop\r\n");
-
-  resf.num = *fpu_res;
-
-  return resf.dbl;
-
-}
-double __wrap_cos(double a)
-{
-
-   //printf("\r\ncos: start\r\n");
-
-  *fpu_ctl = COS;
-
-  op_a.dbl = a;
-  op_b.dbl = 0x0;
-
-  *opa = op_a.num;
-  *opb = op_b.num;
-
-  BIT_SET(*fpu_ctl, 0); //enable
-
-  while (!BIT_CHECK(*fpu_sts, 0) && !BIT_CHECK(*fpu_sts, 1))
-  {
-  }
-
-  BIT_CLEAR(*fpu_ctl, 0);
-
-   //printf("\r\ncos: stop\r\n");
-
-  resf.num = *fpu_res;
-
-  return resf.dbl;
-
-}
-double __wrap_tan(double a)
-{
-
-      
-
-   //printf("\r\ntan: start\r\n");
-
-  *fpu_ctl = TAN;
-
-  op_a.dbl = a;
-  op_b.dbl = 0x0;
-
-  *opa = op_a.num;
-  *opb = op_b.num;
-
-  BIT_SET(*fpu_ctl, 0); //enable
-
-  while (!BIT_CHECK(*fpu_sts, 0) && !BIT_CHECK(*fpu_sts, 1))
-  {
-  }
-
-  BIT_CLEAR(*fpu_ctl, 0);
-
-   //printf("\r\ntan: stop\r\n");
 
   resf.num = *fpu_res;
 

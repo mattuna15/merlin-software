@@ -41,11 +41,24 @@
 	.text
 	.align	2
 SYM (_exit):
-	move.b	#START,d7
-	trap	IMM(14)
+	JMP 0xE00BC0
+	rts
 
 /*
  * inbyte -- get a byte from the console serial port
+*/
+	.align	2
+SYM (inbyte):
+	movem.l	d1/a0,-(sp)		// Save modified registers
+	jsr 0xE00D76
+	movem.l	(sp)+,d1/a0		// Restore registers
+	rts
+
+	
+	
+//no echo E00D9A
+/*
+ * inbyte - no echo -- get a byte from the console serial port
  *	d0 - contains the byte read in
  *
  * Echoes the character the the console.
@@ -53,27 +66,11 @@ SYM (_exit):
  */
 	.text
 	.align	2
-SYM (inbyte):
+SYM (inbyte_noecho):
 	movem.l	d1/a0,-(sp)		// Save modified registers
-	move.b	#INCHE,d7		// Trap function code
-	jsr     0x2f98	
-	extw	d0			// Extend byte result to word
-	extl	d0			// ...and longword
-	cmp	#'\r',d0		// Is it newline?
-	bne	notnl1			// Branch if not
-	move.b	#'\n',d0		// Convert to newline
-notnl1: bsr	outbyte			// Echo it
+	jsr 0xE00D9A
 	movem.l	(sp)+,d1/a0		// Restore registers
 	rts
-
-        .text
-        .align  2
-SYM (inbyte_noecho):
-        movem.l d1/a0,-(sp)             // Save modified registers
-        move.b  #INCHE,d7               // Trap function code
-        jsr     0x2f98
-notln2: movem.l (sp)+,d1/a0             // Restore registers
-        rts
 
 /*
  * outbyte -- sends a byte out the serial port
@@ -85,13 +82,14 @@ notln2: movem.l (sp)+,d1/a0             // Restore registers
 	.align	2
 SYM (outbyte):
 	movem.l	d0/d1/a0,-(sp)		// Save modified registers
-	move.b	#OUTCH,d7		// Trap function code
 	cmp	#'\n',d0		// Is it newline?
 	bne	notnl2			// Branch if not
 	move.b  #'\r',d0		// Carriage return
-	jsr 0x2e22	
+	move.b #0,d1
+	jsr 0x00E00D54
 	move.b  #'\n',d0		// Newline
-notnl2: jsr 0x2e22	
+notnl2: 
+	jsr 0x00E00D54
 	movem.l	(sp)+,d0/d1/a0		// Restore registers
 	rts
 
@@ -107,8 +105,11 @@ SYM (outln):
 	move.l	a0,a5			// Start of string
 	move.l	a1,a6			// End of string
 	addq.l	#1,a6			// Adjust to point to end + 1
-	move.b	#OUT1CR,d7		// Trap function code
-	jsr 0x2bf8	// Call TUTOR function
+	
+	move.b #4,d1
+	jsr 0xE01734
+
+
 	movem.l	(sp)+,d0/d1/a0/a5/a6	// Restore registers
 	rts
 
@@ -125,8 +126,10 @@ SYM (outstr):
 	move.l	a0,a5			// Start of string
 	move.l	a1,a6			// End of string
 	addq.l	#1,a6			// Adjust to point to end + 1
-	move.b	#OUTPUT,d7		// Trap function code
-	jsr 0x2c12	// Call TUTOR function
+
+	move.b #3,d1
+	jsr 0x00E01716
+
 	movem.l	(sp)+,d0/d1/a0/a5/a6	// Restore registers
 	rts
 	

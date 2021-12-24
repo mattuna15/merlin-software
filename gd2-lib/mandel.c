@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdint.h>
-#include "../fp-lib/ieee754.h"
 
 uint32_t addr_pal = 0xe1000UL;
 
@@ -73,8 +72,10 @@ void setup()
 
 static void plot(uint16_t x, uint16_t y, uint32_t i)
 {
-    if ((x < 1280) && (y < 720))
+    if ((x < 1280) && (y < 720)) {
         GD.wr(x + (1280UL * y), i);
+    }
+        
 
 }
 
@@ -118,14 +119,9 @@ int main(void)
             for (k = 1; k < maxiter && (u2 + v2 < (double)4.0); k++)
             {
                 v = 2 * u * v + y;
-                //printf("\r\n1 %.6f %.6f %.6f %.6f %.6f %.6f\r\n",v,u, u2, v2, x, y);
                 u = u2 - v2 + x;
-                //printf("\r\n2 %.6f %.6f %.6f %.6f %.6f %.6f\r\n",v,u, u2, v2, x, y);
                 u2 = u * u;
-                //printf("\r\n3 %.6f %.6f %.6f %.6f %.6f %.6f\r\n",v,u, u2, v2, x, y);
                 v2 = v * v;
-                //printf("\r\n4 %.6f %.6f %.6f %.6f %.6f %.6f\r\n",v,u, u2, v2, x, y);
-
             };
 
             /* compute  pixel color and write it to file */

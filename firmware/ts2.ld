@@ -36,8 +36,9 @@ __DYNAMIC  =  0;
 
 MEMORY
 {
-  ram (rwx) : ORIGIN = 0x0400, LENGTH = 14680064K-2k
-  rom : ORIGIN = 0x00E00000, LENGTH = 1M
+  ram (rwx) : ORIGIN = 0x0d0000, LENGTH = 14680064K-2k
+  rom : ORIGIN = 0x00E00000, LENGTH = 256k
+  fram (rwx) : ORIGIN = 0x00E40000, LENGTH = 256k
 }
 
 /*
@@ -45,7 +46,7 @@ MEMORY
  * grows down
  */
 
-PROVIDE (__stack = 0xDffffe);
+PROVIDE (__stack = 0xDFfffe);
 
 /*
  * Initalize some symbols to be zero so we can reference them in the

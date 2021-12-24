@@ -3,7 +3,7 @@ OUTPUT_ARCH(m68k)
 /* Uncomment this if you want srecords. This is needed for a.out
  * if you plan to use GDB.
 */
-OUTPUT_FORMAT(srec)
+OUTPUT_FORMAT(srec) 
 
 SEARCH_DIR(.)
 GROUP(-lts2 -lc -lgcc )
@@ -36,7 +36,7 @@ __DYNAMIC  =  0;
 
 MEMORY
 {
-  ram (rwx) : ORIGIN = 0x0400, LENGTH = 14680064K-2k
+  ram (rwx) : ORIGIN = 0x2000, LENGTH = 14680064K-8k
   rom : ORIGIN = 0x00E00000, LENGTH = 1M
 }
 
@@ -45,7 +45,7 @@ MEMORY
  * grows down
  */
 
-PROVIDE (__stack = 0xDffffe);
+PROVIDE (__stack = 0x1ffe);
 
 /*
  * Initalize some symbols to be zero so we can reference them in the

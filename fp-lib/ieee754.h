@@ -41,12 +41,7 @@ double __wrap___muldf3(double a, double b);
 double __wrap___adddf3(double a, double b);
 double __wrap___subdf3(double a, double b);
 double __wrap___divdf3(double a, double b);
-double __wrap_pow(double a, double b);
 double __wrap_sqrt(double a);
-double __wrap_exp(double a);
-double __wrap_cos(double a);
-double __wrap_sin(double a);
-double __wrap_tan(double a);
 
 #ifdef __cplusplus
 }
