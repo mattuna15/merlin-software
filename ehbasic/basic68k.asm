@@ -318,6 +318,7 @@ gfxText		ds.l 1
 gfxTextLen	ds.W 1
 memStart	ds.l 1
 memEnd		ds.l 1
+gdfw		ds.l 1
 
 		dc.w	0		* dummy even value and zero pad byte
 
@@ -651,8 +652,6 @@ LAB_COLD
 	BGE.s		LAB_sizok			* branch if >= 16k
 
 	MOVEQ		#5,d0				* error 5 - not enough RAM
-        move.b          #228,D7                         * Go to TUTOR function
-        trap            #14                             * Call TRAP14 handler
 
 LAB_sizok
 
@@ -1529,7 +1528,7 @@ LAB_14E2
 	MOVEQ		#$20,d0			* space is the next character
 LAB_150C
 	BSR		LAB_PRNA			* go print the character
-	CMP.b		#$22,d0			* was it " character
+	CMP.b		#$22,d0			* was it  character
 	BNE.s		LAB_1519			* branch if not
 
 							* we're either entering or leaving quotes
@@ -2358,12 +2357,11 @@ LAB_BITMAP
 	RTS
 
 **************************
-* MEM
-
+*
 LAB_MEM
 		BSR		LAB_GGPR			* get graphics parameters, return count in d1.w
 
-		SUBQ.w	#2,d1			
+		SUBQ.w	#1,d1			
 		BNE		LAB_SNER
 
 		move.l  (sp)+,memEnd(a3)
@@ -3508,13 +3506,15 @@ LAB_shape
 * perform MODE m
 
 LAB_MODE
-*	BSR		LAB_GTBY			* get byte parameter, result in d0 and Itemp
-*	CMP.b		#$12,d0			* compare with max+1
-*	BCC		LAB_FCER			* if >= $10 go do function call error
+	BSR		LAB_GTBY			* get byte parameter, result in d0 and Itemp
+	CMP.b		#$12,d0			* compare with max+1
+	BCC		LAB_FCER			* if >= $10 go do function call error
+	move.b  d0,gdfw(a3)
 
-*	MOVE.l	d0,d1				* copy it
-*	MOVEQ		#92,d0			* set draw mode
-*	TRAP		#15				* do I/O function
+	pea gdfw(a3)
+	jsr gd_mode
+	addq #4,SP
+	
 	RTS
 
 

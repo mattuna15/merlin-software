@@ -151,3 +151,12 @@ void gd_draw_bitmap(uint32_t *x, uint32_t *y, uint32_t *size, uint32_t *handle,
   GD.Vertex2f(*x * *size * 8, *y * *size * 8);
 
 }
+
+void gd_mode(uint32_t *mode) {
+
+    SPI.setDazOn();
+    SPI.transfer(0x41);
+    SPI.transfer((byte)*mode);
+    SPI.setDazOff();
+
+}

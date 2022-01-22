@@ -17,19 +17,13 @@ Instrument testInstrument2;
 
 void playTone(byte channel);
 
+
 bool wasEnterPressed()
 {
 
-	uint8_t volatile *term = (uint8_t volatile *)0xf00009;
-	uint8_t volatile *newchar = (uint8_t volatile *)0xf0000b;
+	getchar();
 
-	if (BIT_CHECK(*term, 0))
-	{
-		byte character = *newchar;
-		return true;
-	}
-	else
-		return false;
+	return true;
 }
 
 void setup()
@@ -66,7 +60,7 @@ void testSynthUnit1()
 	{
 		opl3Duo.setInstrument(channel, testInstrument);
 		opl3Duo.playNote(channel, 5, note);
-		delay(200000);
+		getchar();
 		opl3Duo.setKeyOn(channel, false);
 
 		channel = (channel + 1) % 18;

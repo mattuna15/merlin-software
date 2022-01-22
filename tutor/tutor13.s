@@ -111,7 +111,7 @@ _AV24:   DS.L    1              | 24  $18   0  AUTO VECTORS     "SPUR"
          DS.L    1              | 28  $1C   4                   "AV#4"
          DS.L    1              | 29  $1D   5                   "AV#5"
          DS.L    1              | 30  $1E   6                   "AV#6"
-_AV31:   DS.L    1              | 31  $1F   7                   "AV#7   [ABORT BUTTON]
+_AV31:   DS.L    1              | 31  $1F   7                   "AV#7"    ABORT BUTTON
          DS.L    1              | 32  $20   TRAP  0             "UT 0"
          DS.L    1              | 33  $21   TRAP  1             "UT 1"
          DS.L    1              | 34  $22   TRAP  2             "UT 2"

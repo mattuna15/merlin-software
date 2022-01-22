@@ -20,6 +20,7 @@ void gd_draw_bitmap(uint32_t *x, uint32_t *y, uint32_t *size, uint32_t *handle,
 void gd_load_bitmapfile(uint32_t *filename, uint32_t *flen) ;
 void gd_load_bitmap(uint32_t *pointer, uint32_t *count, uint32_t *asset_end );
 uint32_t gd_rand(uint32_t *seed);
+void gd_mode(uint32_t *mode);
 
 #ifdef __cplusplus
 }

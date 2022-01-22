@@ -1,4 +1,12 @@
-all: lib cobra.run mandel.run 
+all: lib speech.run cobra.run mandel.run 
+
+speech.run: speech.cpp
+	m68k-elf-g++ -fno-exceptions -fomit-frame-pointer -Wall -m68000 -g -O3 speech.cpp ../fp-lib/ieee754.c -o speech.run  \
+			-Wl,--wrap=__muldf3 \
+			-Wl,--wrap=__divdf3 \
+			-Wl,--wrap=__subdf3 \
+			-Wl,--wrap=__adddf3 \
+			 -I../fp-lib/ -T ts2.ld -L. -lGD2 -L../FatFs -lMerlinFat -Xlinker -Map=speech.map
 
 cobra.run: cobra.cpp
 	m68k-elf-g++ -fno-exceptions -fomit-frame-pointer -Wall -m68000 -g -O3 cobra.cpp ../fp-lib/ieee754.c -o cobra.run  \

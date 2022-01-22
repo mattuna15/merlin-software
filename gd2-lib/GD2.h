@@ -92,17 +92,23 @@ public:
   void delay(int ms)
   {
 
-    for (int i = 0; i < ms; i++)
-    {
-      asm("nop");
-    }
+      uint32_t *ms_timer = (uint32_t*)0xf30030;
+
+      uint32_t start = *ms_timer;
+
+      while (*ms_timer-start < ms*1000) {}
+
+    // for (int i = 0; i < ms; i++)
+    // {
+    //   asm("nop");
+    // }
   }
 
   byte transfer(byte x)
   {
     byte r = 0;
 
-    printf("\r\ns:%0X ", x);
+    //printf("\r\ns:%0X ", x);
 
     while (!BIT_CHECK(*spi_ctl, READY))
     {
@@ -118,7 +124,7 @@ public:
     }
 
     r = *spi_data_out;
-    printf("r:%0X\r\n", r);
+   // printf("r:%0X\r\n", r);
 
     return r;
   }

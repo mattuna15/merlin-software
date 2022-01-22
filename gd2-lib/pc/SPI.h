@@ -13,11 +13,15 @@ extern "C" {
 
 static void delay(unsigned int n)
 {
-  usleep(1000 * n);
+  delayMicroseconds(n);
 }
-static void delayMicroseconds(unsigned int n)
+static void delayMicroseconds(uint32_t ms)
 {
-  usleep(n);
+      uint32_t *ms_timer = (uint32_t*)0xf30030;
+
+      uint32_t start = *ms_timer;
+
+      while (*ms_timer-start < ms) {}
 }
 static unsigned long micros()
 {
