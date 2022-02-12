@@ -36,15 +36,21 @@ ship_hs_count ds.b 1
 * lasers
 *******************************
 
+ship_laser_count ds.b 1
+
 ship_laser_x ds.w 4
 ship_laser_y ds.w 4
 ship_laser_angle ds.w 4
 ship_laser_velocity ds.w 4
+ship_laser_age ds.b 4
+
+ufo_laser_count ds.b 1
 
 ufo_laser_x ds.w 4
 ufo_laser_y ds.w 4
 ufo_laser_angle ds.w 4
 ufo_laser_velocity ds.w 4
+ship_laser_age ds.b 4
 
 *******************************
 * asteroids array
@@ -280,8 +286,6 @@ draw_shapes:
 
 end:
         jmp $e00bc0
-
-
 
 *************************************************
 ** draw ship (vertical)
