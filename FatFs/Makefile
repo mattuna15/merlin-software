@@ -1,4 +1,4 @@
-all: fat-test.run
+all: fat-test.run lib
 
 lib: libMerlinFat.a
 

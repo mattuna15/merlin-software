@@ -28,7 +28,7 @@ void gd_begin()
     }
     //LOAD_ASSETS();
 
-    GD.ClearColorRGB(0x103000);
+    GD.ClearColorRGB(0x0);
     GD.Clear();
     GD.swap();
 
@@ -154,9 +154,88 @@ void gd_draw_bitmap(uint32_t *x, uint32_t *y, uint32_t *size, uint32_t *handle,
 
 void gd_mode(uint32_t *mode) {
 
+    SPI.setGPUOff();
     SPI.setDazOn();
     SPI.transfer(0x41);
+
+    printf("\r\n** Mode %d Selected  **\r\n", (byte)*mode);
     SPI.transfer((byte)*mode);
     SPI.setDazOff();
+    SPI.setGPUOn();
+
+}
+
+void game_start() {
+
+        GD.storage();
+        GD.begin();
+
+        GD.ClearColorRGB(0x0);
+        GD.Clear();
+}
+
+int16_t curX = 0;
+int16_t curY = 0;
+
+union Vertex
+{
+    int8_t vertex8[4];
+    uint16_t vertex16[2];
+    uint32_t vertex32;
+};
+
+void beginLine(uint32_t *startPoint)
+{
+
+    union Vertex point;
+
+    point.vertex32 = *startPoint;
+
+    GD.Begin(LINES);
+    GD.VertexFormat(0);
+    GD.ColorRGB(0xFFFFFF);
+
+    curX = point.vertex16[0];
+    curY = point.vertex16[1];
+
+    printf("\r\n%lx,%x,%x",*startPoint, curX, curY);
+
+}
+
+void addPoint(uint32_t *nextPoint)
+{
+
+    union Vertex point;
+
+    point.vertex32 = *nextPoint;
+
+    int16_t prevX = curX;
+    int16_t prevY = curY;
+
+    int16_t diffX = point.vertex8[2] * point.vertex8[0];
+    int16_t diffY = point.vertex8[3] * point.vertex8[0];
+
+    int brightness = point.vertex8[1];
+    if (brightness == 0)
+        GD.ColorRGB(0x0);
+    else
+        GD.ColorRGB(0xFFFFFF);
+
+    GD.ColorA(0x40 + brightness); // Draw background glows
+    GD.LineWidth(20);
+    if (brightness > 3 && (diffX > 10 || diffY > 10))
+        GD.Vertex2f(curX, curY);
+
+    curX += diffX;
+    curY += diffY;
+
+    if (brightness > 3 && (diffX > 10 || diffY > 10))
+        GD.Vertex2f(curX, curY);
+
+    GD.BlendFunc(SRC_ALPHA, ONE);
+    GD.ColorA(0xf6 + brightness); // Draw foreground vectors
+    GD.LineWidth(5);
+    GD.Vertex2f(prevX, prevY);
+    GD.Vertex2f(curX, curY);
 
 }

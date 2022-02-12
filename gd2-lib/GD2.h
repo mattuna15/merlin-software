@@ -108,7 +108,7 @@ public:
   {
     byte r = 0;
 
-    //printf("\r\ns:%0X ", x);
+    printf("\r\n***s:%0X \r\n", x);
 
     while (!BIT_CHECK(*spi_ctl, READY))
     {
@@ -124,7 +124,7 @@ public:
     }
 
     r = *spi_data_out;
-   // printf("r:%0X\r\n", r);
+    printf("\r\nr:%0X****\r\n", r);
 
     return r;
   }
@@ -588,6 +588,7 @@ void delay(int ms);
 #define REG_DLSWAP (ft8xx_model ? 0x302054UL : 0x102450UL)
 #define REG_FRAMES (ft8xx_model ? 0x302004UL : 0x102404UL)
 #define REG_FREQUENCY (ft8xx_model ? 0x30200cUL : 0x10240cUL)
+#define REG_GPIOX (ft8xx_model ? 0x30209CUL : 0x102490UL)
 #define REG_GPIO (ft8xx_model ? 0x302094UL : 0x102490UL)
 #define REG_GPIO_DIR (ft8xx_model ? 0x302090UL : 0x10248cUL)
 #define REG_HCYCLE (ft8xx_model ? 0x30202cUL : 0x102428UL)

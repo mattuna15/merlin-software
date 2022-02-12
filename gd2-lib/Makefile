@@ -28,6 +28,14 @@ mandel.run: mandel.c
 			-Wl,--wrap=__extendsfdf2 \
 			-I../fp-lib/ -T ts2.ld -L. -lGD2 -L../FatFs -lMerlinFat -Xlinker -Map=mandel.map
 
+daz.run: daz.c
+	m68k-elf-g++ -fno-exceptions -fomit-frame-pointer -Wall -m68000 -g -O3 ../fp-lib/ieee754.c daz.c -o daz.run  \
+			-Wl,--wrap=__muldf3 \
+			-Wl,--wrap=__divdf3 \
+			-Wl,--wrap=__subdf3 \
+			-Wl,--wrap=__adddf3 \
+			-I../fp-lib/ -T ts2.ld -L. -lGD2 -L../FatFs -lMerlinFat -Xlinker -Map=daz.map
+
 lib: libGD2.a
 
 

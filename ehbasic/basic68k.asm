@@ -49,6 +49,7 @@
 
 		XREF initDrive
 		XREF gd_begin
+		XREF gd_mode
 		XREF cd
 		XREF PrintDirectory
 		XREF loadFile
@@ -324,6 +325,8 @@ gdfw		ds.l 1
 
 main
 	jsr initDrive
+	BTST.B #0,$f00019 * don't check gameduino if in terminal mode.
+	BNE prg_strt
 	jsr gd_begin
 
 prg_strt
@@ -3507,14 +3510,41 @@ LAB_shape
 
 LAB_MODE
 	BSR		LAB_GTBY			* get byte parameter, result in d0 and Itemp
-	CMP.b		#$12,d0			* compare with max+1
+	CMP.b	#$2,d0			* compare with max+1
 	BCC		LAB_FCER			* if >= $10 go do function call error
-	move.b  d0,gdfw(a3)
+	move.l  d0,gdfw(a3)
 
-	pea gdfw(a3)
-	jsr gd_mode
-	addq #4,SP
-	
+    
+WAIT    BTST.B #5,$F40009
+        BEQ.S WAIT
+        
+        BSET.B #2,$F40009
+        
+        MOVE.B #$41,$F4000b
+        BSET.B #3,$F40009 ; VALID
+
+        Bclr.B #3,$F40009 ; NOT VALID
+
+WAIT3   BTST.B #5,$F40009 ; READY
+        BEQ.S WAIT3
+                
+        MOVE.B d0,$F4000b
+        BSET.B #3,$F40009 ; VALID
+        
+        Bclr.B #3,$F40009 ; NOT VALID
+       
+ 
+WAIT5   BTST.B #5,$F40009 ; READY
+        BEQ.S WAIT5     
+
+        Bclr.B #2,$F40009
+
+		TST.B d0 * don't check gameduino if in terminal mode.
+		BNE RTS1
+
+		jsr gd_begin
+
+RTS1	
 	RTS
 
 

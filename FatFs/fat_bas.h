@@ -16,8 +16,8 @@ FRESULT cd(char *directory);
 void PrintDirectory(char* cwd);
 
 FRESULT cd(char *directory);
-FRESULT bload(char* cwd,char *filename, uint16_t *startaddress);
-int blsave(char *cwd, char *filename, uint16_t *startaddress, uint16_t *endaddress);
+FRESULT bload(char* cwd,uint32_t *filename, uint32_t *flen, uint32_t *startaddress);
+int blsave(char *cwd, uint32_t *filename, uint32_t *flen, uint32_t *startaddress, uint32_t *endaddress);
 
 #ifdef __cplusplus
 }

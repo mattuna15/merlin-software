@@ -140,15 +140,25 @@ FRESULT cd(char *directory)
     return res;
 }
 
-FRESULT bload(char *cwd, char *filename, uint16_t *startaddress)
+FRESULT bload(char *cwd, uint32_t *filename, uint32_t *flen, uint32_t *startaddress)
 {
     FIL file;
     char fullName[256] = {0};
+    char string[256] = {0};
+    uint8_t lenb = (uint8_t)((*flen >> 16) & 0xff);
+    uintptr_t ptr = (uintptr_t)*filename;
+    volatile char *buf = (char *)ptr;
+
+    for (int i = 0; i < lenb; i++)
+    {
+        string[i] = *buf++;
+    }
 
     if (strcmp("/", cwd) == 0)
-        sprintf(fullName, "%s", filename);
+        sprintf(fullName, "%s", string);
     else
-        sprintf(fullName, "/%s/%s", cwd, filename);
+        sprintf(fullName, "/%s/%s", cwd, string);
+
 
     FRESULT res = f_open(&file, fullName, FA_OPEN_EXISTING | FA_READ);
     if (res != FR_OK)
@@ -156,23 +166,28 @@ FRESULT bload(char *cwd, char *filename, uint16_t *startaddress)
         printf("\r\n%s - not found - %d\r\n", fullName, res);
         return res;
     }
-    char buf[512];
+    char buffer[512];
     UINT n;
 
+    uint16_t *mem = (uint16_t *)*startaddress;
+
+
+    printf("\r\nStart: 0x%lx",*startaddress);
+
     printf("\r\n");
-    res = f_read(&file, buf, 512, &n);
+    res = f_read(&file, buffer, 512, &n);
     while (n > 0)
     {
 
         for (int i = 0; i < (n - 1); i = i + 2)
         {
 
-            uint16_t result = (((uint16_t)(buf[i] & 0xFF) << 8) | (buf[i + 1] & 0xFF) & 0xffff);
+            uint16_t result = (((uint16_t)(buffer[i] & 0xFF) << 8) | (buffer[i + 1] & 0xFF) & 0xffff);
 
-            *startaddress++ = result;
+            *mem++ = result;
         }
 
-        res = f_read(&file, buf, 512, &n);
+        res = f_read(&file, buffer, 512, &n);
         if (res != FR_OK)
         {
             printf("Error - %d\r\n", res);
@@ -186,13 +201,32 @@ FRESULT bload(char *cwd, char *filename, uint16_t *startaddress)
     return 1;
 }
 
-int blsave(char *cwd, char *filename, uint16_t *startaddress, uint16_t *endaddress)
+int blsave(char *cwd, uint32_t *filename, uint32_t *flen, uint32_t *startaddress, uint32_t *endaddress)
 {
+    FIL file;
     char fullName[256] = {0};
+    char string[256] = {0};
+    uint8_t lenb = (uint8_t)((*flen >> 16) & 0xff);
+    uintptr_t ptr = (uintptr_t)*filename;
+    volatile char *buf = (char *)ptr;
+
+    uintptr_t start_ptr = (uintptr_t)*startaddress;
+
+    printf("\r\nStart: 0x%lX End: 0x%lX\r\n", *startaddress, *endaddress);
+
+
+
+    for (int i = 0; i < lenb; i++)
+    {
+        string[i] = *buf++;
+    }
+
     if (strcmp("/", cwd) == 0)
-        sprintf(fullName, "%s", filename);
+        sprintf(fullName, "%s", string);
     else
-        sprintf(fullName, "/%s/%s", cwd, filename);
+        sprintf(fullName, "/%s/%s", cwd, string);
+
+    printf("\r\nFilename: %s\r\n", fullName);
 
     FRESULT res = f_open(&file, fullName, FA_CREATE_ALWAYS | FA_WRITE);
 
@@ -202,11 +236,11 @@ int blsave(char *cwd, char *filename, uint16_t *startaddress, uint16_t *endaddre
         return res;
     }
 
-    uint32_t programlen = endaddress - startaddress;
+    uint32_t programlen = *endaddress - *startaddress;
 
     UINT bw;
 
-    res = f_write(&file, startaddress, programlen, &bw);
+    res = f_write(&file, start_ptr, programlen, &bw);
     if (res != FR_OK)
     {
         printf("Error - %d\r\n", res);

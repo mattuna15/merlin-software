@@ -1,86 +1,77 @@
-#include "converted-assets/noisy_assets.h"
 #include "GD2.h"
+
+
+#define int1 0x64
+#define int2 0x68
+#define int3 0x6c
+#define int4 0x70
+#define int5 0x74
+#define int6 0x78
+#define int7 0x7c
+
+void gd_interrupt_handler() {
+
+    printf("\r\nBing\r\n");
+
+    uint8_t reg_flags = GD.rd(REG_INT_FLAGS);
+    GD.cmd_regwrite(REG_INT_EN, 0);
+
+    printf("\r\n0x%X\r\n",reg_flags);
+    exit(0);
+
+}
+
+void setGdHandler(void(*handler)()) {
+	asm(
+		"move.l	%0,0x70":
+						: "r" (handler)
+						:);
+
+	volatile uint32_t *gd_int = (uint32_t*)int4;
+
+	printf("\r\ngd address = 0x%0lX\r\n", *gd_int);
+    GD.cmd_regwrite(REG_GPIOX, 0x808c);
+    GD.cmd_regwrite(REG_INT_MASK, 0xFF);
+    GD.cmd_regwrite(REG_INT_EN, 0x1);
+
+}
 
 void setup()
 {
-  printf("\r\n\r\nCSound Demo\r\n");
+  printf("\r\nInterrupts Demo\r\n");
 
   GD.storage();
   GD.begin();
   GD.Clear();
-  LOAD_ASSETS();
+
+  setGdHandler(&gd_interrupt_handler);
 
   GD.ClearColorRGB(0x0);
   GD.Clear();
 }
 
-static void saydigit(byte n)
-{
-    GD.ClearColorRGB(0x101000); // JCB{
-    GD.Clear();
-    GD.cmd_number(240, 136, 31, OPT_CENTER, n);
-    GD.swap();
-    GD.flush();
-    // }JCB
-    uint32_t base, len;
-    switch (n)
-    {
-    case 0:
-        base = DIGIT_0;
-        len = DIGIT_0_LENGTH;
-        break;
-    case 1:
-        base = DIGIT_1;
-        len = DIGIT_1_LENGTH;
-        break;
-    case 2:
-        base = DIGIT_2;
-        len = DIGIT_2_LENGTH;
-        break;
-    case 3:
-        base = DIGIT_3;
-        len = DIGIT_3_LENGTH;
-        break;
-    case 4:
-        base = DIGIT_4;
-        len = DIGIT_4_LENGTH;
-        break;
-    case 5:
-        base = DIGIT_5;
-        len = DIGIT_5_LENGTH;
-        break;
-    case 6:
-        base = DIGIT_6;
-        len = DIGIT_6_LENGTH;
-        break;
-    case 7:
-        base = DIGIT_7;
-        len = DIGIT_7_LENGTH;
-        break;
-    case 8:
-        base = DIGIT_8;
-        len = DIGIT_8_LENGTH;
-        break;
-    case 9:
-        base = DIGIT_9;
-        len = DIGIT_9_LENGTH;
-        break;
-    }
-    GD.sample(base, len, 8000, ADPCM_SAMPLES);
-}
 
 int main()
 {
     setup();
 
-    for (byte n = 0; n < 10; n++)
-    {
-        GD.Clear();
-        GD.cmd_number(240, 136, 31, OPT_CENTER, n);
-        GD.swap();
-        printf("\r\n number: %d\r\n", n);
-        saydigit(n);
-        getchar();
-    }
+    GD.cmd_interrupt(200);
+    GD.swap();
 
-} //' }A
+    uint8_t reg_flags = GD.rd(REG_INT_FLAGS);
+
+    printf("\r\n0x%X\r\n",reg_flags);
+
+    reg_flags = GD.rd(REG_INT_MASK);
+
+    printf("\r\n0x%X\r\n",reg_flags);
+
+    reg_flags = GD.rd(REG_INT_EN);
+
+    printf("\r\n0x%X\r\n",reg_flags);
+
+    uint16_t reg_flags2 = GD.rd16(REG_GPIOX);
+    printf("\r\n0x%X\r\n",reg_flags2);
+    
+    getchar();
+} 

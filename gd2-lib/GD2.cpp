@@ -1079,6 +1079,7 @@ void GDClass::Tag(byte s) {
 void GDClass::Vertex2f(int16_t x, int16_t y) {
   // x = int(16 * x);
   // y = int(16 * y);
+ // printf("\r\nx: %d y: %d\r\n",x,y);
   cI((1UL << 30) | ((x & 32767L) << 15) | ((y & 32767L) << 0));
 }
 void GDClass::Vertex2ii(uint16_t x, uint16_t y, byte handle, byte cell) {
@@ -1645,12 +1646,12 @@ void GDClass::get_inputs(void) {
     }
   }
 //#define DUMP_INPUTS 1
-#ifdef DUMP_INPUTS
+//#ifdef DUMP_INPUTS
   for (size_t i = 0; i < sizeof(inputs); i++) {
     printf("val: %li: %0X\r\n",i,bi[i]);
   }
   
-#endif
+//#endif
 #endif
 }
 void GDClass::bulkrd(uint32_t a) {
