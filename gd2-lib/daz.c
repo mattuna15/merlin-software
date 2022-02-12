@@ -87,6 +87,12 @@ int main()
             GD.ColorRGB(0xFFFFFF);
             curX = vectors[vec][4] + 20;
             curY = vectors[vec][5] - 128;
+
+            int16_t angle = 32768;
+
+            rotate(curX, curY, &angle);
+
+
             printf("\r\nX: %d Y: %d\r\n", curX, curY);
         }
         else

@@ -37,6 +37,7 @@ __DYNAMIC  =  0;
 MEMORY
 {
   ram (rwx) : ORIGIN = 0x400, LENGTH = 14M
+  fdata (rw) : ORIGIN = 0xDF0000, LENGTH = 64k
   rom : ORIGIN = 0x00E00000, LENGTH = 256k
 }
 

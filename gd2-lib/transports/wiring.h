@@ -189,10 +189,12 @@ public:
   uint16_t rp()
   {
     uint16_t r = __rd16(REG_CMD_READ);
-    if (r == 0xfff)
+    if (r == 0xfff) {
       printf("\r\nAlert %0x\r\n", r);
+      printf("\r\nGPU Error - Aborted\r\n");
+      asm("jmp 0xE00BC0");
+    }
 
-    // GD.alert();
     return r;
   }
   void finish()
