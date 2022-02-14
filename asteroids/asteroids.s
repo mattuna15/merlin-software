@@ -95,26 +95,28 @@ main:
         jsr game_start
 
         *************************************************
+        * start
+
+        move.l #4,level
+        move.b #3,ship_lives
+
+***********************************
+** restart level
+*
+
+restart:
+        *************************************************
         * initialise randomiser
 
         jsr gd_seed
 
-        *************************************************
-        * start
-
-        move.l #4,level
-
-***********************************
-** ship initial setting
-*
-        move.w #500,ship_x
-        move.w #100,ship_y
+        move.w #640,ship_x
+        move.w #360,ship_y
         move.w #256,ship_scale
         clr.b  ship_firing_count
         move.w #0,ship_angle
         move.w #$8000,ship_heading
         move.w #0,ship_velocity
-        move.b #3,ship_lives
         move.b #3,ship_hs_count
 
 ****************************
@@ -309,8 +311,6 @@ hyperspace:
         addq #4,sp
         move.w d0,ship_y
 
-check_collision:
-
 ************************
 * draw ship/asteroids/ufo
 *
@@ -470,7 +470,7 @@ chk_max_y:
 
 draw_ast:
 
-        jsr collision
+        jsr ast_collision
 
         move.w (a4)+,d3
         swap d3
@@ -544,8 +544,10 @@ draw_shape:
         dbra d2,draw_shape
 
         rts
-
-collision:
+*****************************************************
+* asteroid collisions
+*
+ast_collision:
 
         *a4x a5y - asteroid
 
@@ -587,8 +589,13 @@ chkcoll:
         cmp.w d3,d4
         blt endcoll
 
-        
-        jmp $e00bc0
+        sub.b #1,ship_lives   * 1 life down
+
+        cmp #0,ship_lives * end!
+        beq end
+
+        movem.l (sp)+,d0-d7/a0-a6         ; restore registers
+        bra restart
 
 endcoll:
         movem.l (sp)+,d0-d7/a0-a6         ; restore registers
