@@ -280,22 +280,3 @@ uint32_t polar_ship(int16_t *r, uint16_t *th, int16_t *old_r, uint16_t *old_th) 
 
     return cart;
 }
-
-// void UpdatePlayerMotion()
-// {
-//     float ax = 0.0 ;float ay = 0.0 ;
-//     if( player_thrust )  // If the player is trying to accelerate set by your input code
-//     {     
-//         ax += THRUST_MAGNITUDE*Player->DirectionVector.x ;     
-//         ay += THRUST_MAGNUTIDE*Player->DirectionVector.y ;
-//     }
-
-//     ax -= FRICTION_MAGNITUDE*Player->VelocityVector.x ;
-//     ay -= FRICTION_MAGNITUDE*Player->VelocityVector.y ;
-
-//     Player->VelocityVector.x += ax*dt ;
-//     Player->VelocityVector.y += ay*dt ;
-//     Player->PositionVector.x += Player->PositionVector.x*dt ;
-//     Player->PositionVector.y += Player->PositionVector.y*dt ;
-
-// }

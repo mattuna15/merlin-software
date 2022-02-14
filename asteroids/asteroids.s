@@ -470,6 +470,8 @@ chk_max_y:
 
 draw_ast:
 
+        jsr collision
+
         move.w (a4)+,d3
         swap d3
         move.w (a5)+,d3
@@ -541,6 +543,55 @@ draw_shape:
 
         dbra d2,draw_shape
 
+        rts
+
+collision:
+
+        *a4x a5y - asteroid
+
+        movem.l d0-d7/a0-a6,-(sp)        ; backup registers
+
+        lea ship_x,a0
+        lea ship_y,a1
+
+        move.l #0,d0
+        move.l #0,d1
+        move.l #0,d2
+
+        move.w (a0),d0
+        move.w (a1),d1
+        move.w (a4),d2
+        move.w (a5),d3
+
+        move.l #20,d4
+        add #8,d4 
+
+        sub.w d0,d2
+        sub.w d1,d3
+
+        cmp.w #0,d2
+        bge chky 
+
+        muls.w #-1,d2
+
+chky:
+        cmp.w #0,d3
+        bge chkcoll 
+
+        muls.w #-1,d3
+
+chkcoll:
+        cmp.w d2,d4
+        blt endcoll
+
+        cmp.w d3,d4
+        blt endcoll
+
+        
+        jmp $e00bc0
+
+endcoll:
+        movem.l (sp)+,d0-d7/a0-a6         ; restore registers
         rts
 
 
