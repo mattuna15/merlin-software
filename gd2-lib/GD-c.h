@@ -28,7 +28,7 @@ void game_start() ;
 void beginLine(uint32_t *startPoint);
 void addPoint(uint32_t *nextPoint);
 uint32_t polar(int16_t *r, uint16_t *th);
-
+uint32_t polar_ship(int16_t *r, uint16_t *th, int16_t *old_r, uint16_t *old_th);
 
 #ifdef __cplusplus
 }

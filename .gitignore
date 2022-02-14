@@ -55,3 +55,7 @@ dkms.conf
 *.lst
 *.bin
 *.lock
+asteroids/asteroids.srec
+asteroids/listing.asm
+firmware/G-DOS
+WiFiEspAT

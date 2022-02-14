@@ -65,9 +65,9 @@ uint16_t gd_rand(uint16_t *max)
 
     uint16_t r = 0;
     
-    while (r == 0) {
+    //while (r == 0) {
         r = rand() % *max;
-    }
+    //}
 
     return r;
 }
@@ -215,7 +215,6 @@ void beginLine(uint32_t *startPoint)
     GD.VertexFormat(0);
     GD.ColorRGB(0xFFFFFF);
 
- //   printf("\r\n new shape. x: %d y: %d \r\n", curX, curY);
 }
 
 void addPoint(uint32_t *nextPoint)
@@ -224,8 +223,6 @@ void addPoint(uint32_t *nextPoint)
     union Vertex point;
 
     point.vertex32 = *nextPoint;
-
-    //printf("\r\n0x%lx\r\n", point.vertex32);
 
     int16_t prevX = curX;
     int16_t prevY = curY;
@@ -246,8 +243,6 @@ void addPoint(uint32_t *nextPoint)
     GD.LineWidth(5);
     GD.Vertex2f(prevX, prevY);
     GD.Vertex2f(curX, curY);
-
-   //printf("\r\n scale: %d diff x: %d diff y: %d\r\n",point.vertex8[0],point.vertex8[2],point.vertex8[3]);
 }
 
 uint32_t polar(int16_t *r, uint16_t *th)
@@ -255,9 +250,6 @@ uint32_t polar(int16_t *r, uint16_t *th)
 
     uint16_t heading = (uint16_t)*th;
     int16_t velocity = (int16_t)*r;
-
-    if (velocity == 1) 
-        velocity = 2;
 
     int16_t x = (int16_t)(-GD.rsin(velocity, heading));
     int16_t y = (int16_t)(GD.rcos(velocity, heading));
@@ -268,6 +260,26 @@ uint32_t polar(int16_t *r, uint16_t *th)
     return cart;
 }
 
+
+uint32_t polar_ship(int16_t *r, uint16_t *th, int16_t *old_r, uint16_t *old_th) {
+
+
+    uint16_t heading = (uint16_t)*th;
+    int16_t velocity = (int16_t)*r;
+    uint16_t old_heading = (uint16_t)*old_th;
+    int16_t old_velocity = (int16_t)*old_r;
+
+    int16_t x = (int16_t)(-GD.rsin(velocity, heading));
+    int16_t y = (int16_t)(GD.rcos(velocity, heading));
+
+    int16_t oldx = (int16_t)(-GD.rsin(old_velocity, old_heading));
+    int16_t oldy = (int16_t)(GD.rcos(old_velocity, old_heading));
+
+    uint32_t cart = (y + oldy) << 16;
+    cart += (x + oldx);
+
+    return cart;
+}
 
 // void UpdatePlayerMotion()
 // {
