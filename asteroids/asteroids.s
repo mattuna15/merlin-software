@@ -139,10 +139,7 @@ astspeed:
         jsr gd_rand
         addq #4,sp
 
-        cmp.w #0,d0
-        bne rand_head
-
-        move.w #2,d0
+        addq.w #2,d0
 
 rand_head:
         move.w d0,(a4)+
@@ -262,17 +259,16 @@ set_heading: *  only do this if we are boosting - convert to furmans for the pol
 
 fire:
 
-        cmp.b #3,ship_laser_count
-        blt add_ship_laser
+        cmp.b #0,ship_laser_count
+        beq add_ship_laser
 
-        move.w #2,ship_laser_count
+        move.w #1,ship_laser_count
         bra draw_shapes
 
 add_ship_laser:
 
         lea furmans,a1
         lea ship_laser_heading,a0
-        adda ship_laser_count,a0
         
         move.w ship_angle,d0
         mulu #2,d0
@@ -281,14 +277,19 @@ add_ship_laser:
         move.w (a1),(a0)
 
         lea ship_laser_velocity,a0
-        adda ship_laser_count,a0
-        move.w #5,(a0)
+        move.w #20,(a0)
 
         lea ship_laser_age,a0
-        adda ship_laser_count,a0
-        move.w #5,(a0)
+        move.w #15,(a0)
 
         addq #1,ship_laser_count
+
+        lea ship_laser_x,a0
+        lea ship_laser_y,a1 
+        move.l ship_x,(a0)
+        move.l ship_y,(a1)
+
+
         bra draw_shapes
 
 thrust:     * make sure that the heading is reset at thrust press
@@ -437,13 +438,10 @@ set_ship_points:
 ** draw lasers
 
 draw_lasers:
-        *beq ast_start
 
         lea.l ship_laser_count,a0
         cmp #0,(a0)
         beq ast_start
-
-        move.b (a0),d4
 
         lea.l ship_laser_heading,a1
         lea.l ship_laser_velocity,a2
@@ -452,9 +450,11 @@ draw_lasers:
         lea.l ship_laser_y,a5
 
 laser_loop:
+        
+        cmp.w #0,(a3)
+        beq ast_start
 
-        cmp #0,(a3)
-        ble next_laser
+        sub.w #1,(a3)
 
         move.l a1,-(sp)
         move.l a2,-(sp)
@@ -504,12 +504,12 @@ draw_laser:
         addq.l #4,sp
 
 next_laser:
-        sub.b #1,(a3)+
 
-        adda #2,a1
-        adda #2,a2
 
-        dbra d4,laser_loop
+*        adda #2,a1
+*        adda #2,a2
+
+*        dbra d4,laser_loop
 
 
 *************************************************
