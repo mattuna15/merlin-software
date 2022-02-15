@@ -214,6 +214,7 @@ void beginLine(uint32_t *startPoint)
     GD.Begin(LINES);
     GD.VertexFormat(0);
     GD.ColorRGB(0xFFFFFF);
+    GD.BlendFunc(SRC_ALPHA, ONE);
 
 }
 
@@ -279,4 +280,29 @@ uint32_t polar_ship(int16_t *r, uint16_t *th, int16_t *old_r, uint16_t *old_th) 
     cart += (x + oldx);
 
     return cart;
+}
+
+
+void bullet(uint32_t *startPoint)
+{
+
+    union Vertex point;
+
+    point.vertex32 = *startPoint;
+
+    curX = point.vertex16[0];
+    curY = point.vertex16[1];
+
+    printf("\r\nx: %d y: %d",curX, curY);
+
+    GD.Begin(POINTS);
+    GD.VertexFormat(0);
+    GD.ColorRGB(0xFFFFFF);
+    GD.PointSize(5);
+    GD.ColorA(0xff); // Draw foreground vectors
+    GD.BlendFunc(SRC_ALPHA, ONE);
+
+    GD.Vertex2f(curX, curY);
+    GD.Vertex2f(curX, curY); //additive
+
 }

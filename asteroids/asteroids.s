@@ -29,7 +29,6 @@ ship_old_heading ds.w 1
 ship_old_velocity ds.w 1
 ship_heading ds.w 1
 ship_thrust_count ds.b 1
-ship_firing_count ds.b 1
 ship_lives ds.b 1
 ship_scale ds.w 1
 ship_hs_count ds.b 1
@@ -42,7 +41,7 @@ ship_laser_count ds.b 1
 
 ship_laser_x ds.w 4
 ship_laser_y ds.w 4
-ship_laser_angle ds.w 4
+ship_laser_heading ds.w 4
 ship_laser_velocity ds.w 4
 ship_laser_age ds.b 4
 
@@ -50,7 +49,7 @@ ufo_laser_count ds.b 1
 
 ufo_laser_x ds.w 4
 ufo_laser_y ds.w 4
-ufo_laser_angle ds.w 4
+ufo_laser_heading ds.w 4
 ufo_laser_velocity ds.w 4
 ufo_laser_age ds.b 4
 
@@ -76,7 +75,6 @@ ufo_y ds.w 1
 ufo_velocity ds.w 1
 ufo_heading ds.w 1
 ufo_thrust ds.b 1
-ufo_firing_count ds.b 1
 ufo_lives ds.b 1
 ufo_scale ds.l 1
 ufo_active ds.b 1
@@ -113,7 +111,7 @@ restart:
         move.w #640,ship_x
         move.w #360,ship_y
         move.w #256,ship_scale
-        clr.b  ship_firing_count
+        move.b #0,ship_laser_count
         move.w #0,ship_angle
         move.w #$8000,ship_heading
         move.w #0,ship_velocity
@@ -263,11 +261,34 @@ set_heading: *  only do this if we are boosting - convert to furmans for the pol
         bra draw_shapes
 
 fire:
-        addq #1,ship_firing_count
-        cmp.b #4,ship_firing_count
-        blt draw_shapes
 
-        move.w #3,ship_firing_count
+        cmp.b #3,ship_laser_count
+        blt add_ship_laser
+
+        move.w #2,ship_laser_count
+        bra draw_shapes
+
+add_ship_laser:
+
+        lea furmans,a1
+        lea ship_laser_heading,a0
+        adda ship_laser_count,a0
+        
+        move.w ship_angle,d0
+        mulu #2,d0
+        adda d0,a1
+
+        move.w (a1),(a0)
+
+        lea ship_laser_velocity,a0
+        adda ship_laser_count,a0
+        move.w #5,(a0)
+
+        lea ship_laser_age,a0
+        adda ship_laser_count,a0
+        move.w #5,(a0)
+
+        addq #1,ship_laser_count
         bra draw_shapes
 
 thrust:     * make sure that the heading is reset at thrust press
@@ -411,6 +432,85 @@ set_ship_points:
         move.l #256,shape_scale
 
         jsr shape_start
+
+*************************************************
+** draw lasers
+
+draw_lasers:
+        *beq ast_start
+
+        lea.l ship_laser_count,a0
+        cmp #0,(a0)
+        beq ast_start
+
+        move.b (a0),d4
+
+        lea.l ship_laser_heading,a1
+        lea.l ship_laser_velocity,a2
+        lea.l ship_laser_age,a3
+        lea.l ship_laser_x,a4
+        lea.l ship_laser_y,a5
+
+laser_loop:
+
+        cmp #0,(a3)
+        ble next_laser
+
+        move.l a1,-(sp)
+        move.l a2,-(sp)
+        jsr polar
+        addq #8,sp
+
+        add.w d0,(a4)
+        cmp.w #0,(a4)
+        bge chk_max_laser_x
+
+        move.w #1280,(a4)
+        bra.s chk_laser_y
+
+chk_max_laser_x:        
+        cmp.w #1280,(a4)
+        ble chk_laser_y
+
+        move.w #0,(a4)
+
+chk_laser_y:
+        swap d0
+        add.w d0,(a5)
+
+        cmp.w #0,(a5)
+        bge chk_max_laser_y
+
+        move.w #720,(a5)
+        bra.s draw_laser
+
+chk_max_laser_y:
+        cmp.w #720,(a5)
+        ble draw_laser
+
+        move.w #0,(a5)
+
+draw_laser:
+
+        *jsr ast_collision
+
+        move.w (a4)+,d3
+        swap d3
+        move.w (a5)+,d3
+
+        move.l d3,points
+        pea points
+        jsr bullet
+        addq.l #4,sp
+
+next_laser:
+        sub.b #1,(a3)+
+
+        adda #2,a1
+        adda #2,a2
+
+        dbra d4,laser_loop
+
 
 *************************************************
 ** draw asteroids

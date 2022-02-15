@@ -50,7 +50,7 @@ SYM (_exit):
 	.align	2
 SYM (inbyte):
 	movem.l	d1/a0,-(sp)		// Save modified registers
-	jsr 0xE00D76
+	jsr 0xE00DAA
 	movem.l	(sp)+,d1/a0		// Restore registers
 	rts
 
@@ -68,7 +68,20 @@ SYM (inbyte):
 	.align	2
 SYM (inbyte_noecho):
 	movem.l	d1/a0,-(sp)		// Save modified registers
-	jsr 0xE00D9A
+
+	BTST.B #0,0xf00019 
+	BEQ.S GETU
+	
+KEYBI:  
+	BTST.B #0,0xf20003
+	BEQ.S  KEYBI
+	MOVE.B 0xf20001,d0
+	BRA.S LEAVE
+
+
+GETU:	
+	jsr 0xE00D98
+LEAVE:
 	movem.l	(sp)+,d1/a0		// Restore registers
 	rts
 
@@ -86,10 +99,10 @@ SYM (outbyte):
 	bne	notnl2			// Branch if not
 	move.b  #'\r',d0		// Carriage return
 	move.b #0,d1
-	jsr 0x00E00D54
+	jsr 0x00E00D6A
 	move.b  #'\n',d0		// Newline
 notnl2: 
-	jsr 0x00E00D54
+	jsr 0x00E00D6A
 	movem.l	(sp)+,d0/d1/a0		// Restore registers
 	rts
 
@@ -107,7 +120,7 @@ SYM (outln):
 	addq.l	#1,a6			// Adjust to point to end + 1
 	
 	move.b #4,d1
-	jsr 0xE01734
+	jsr 0xE0174E
 
 
 	movem.l	(sp)+,d0/d1/a0/a5/a6	// Restore registers
@@ -128,7 +141,7 @@ SYM (outstr):
 	addq.l	#1,a6			// Adjust to point to end + 1
 
 	move.b #3,d1
-	jsr 0x00E01716
+	jsr 0xE01730
 
 	movem.l	(sp)+,d0/d1/a0/a5/a6	// Restore registers
 	rts
@@ -136,19 +149,26 @@ SYM (outstr):
 /*
  * havebyte -- checks to see if there is a byte in the serial port,
  *             returns 1 if there is a byte, 0 otherwise.
- * TCP0_TxValid    => eth_ctl(6), --Transmit data valid
-*        TCP0_TxReady    => eth_ctl(3), --Transmit data ready
-*        TCP0_RxValid    => eth_ctl(2), --Receive data valid
-*        TCP0_RxReady    => eth_ctl(5)  --Receive data ready
  */
-	ACIA1=0xF40045		// ethernet address status
+	ACIA1=0xF00009		// ethernet address status
+	KEYB=0xF20003
 	.text
 	.align	2
 SYM (havebyte):
 	movem.l	a0/d1,-(a7)		// Save working registers
+
+	BTST.B #0,0xf00019 
+	BEQ.S CHECKU
+
+	LEA.L   KEYB,a0
+	BRA CHECK_BYTE
+
+CHECKU:
 	lea.l	ACIA1,a0		// A0 points to console ACIA
-	move.b	(a0),d1			// Read ACIA status
-	btst	#2,d1			// Test RDRF bit
+
+CHECK_BYTE:
+	move.b	(a0),d1			// Read ACIA statu	s
+	btst	#0,d1			// Test RDRF bit
 	beq.s	RXNOTREADY		// Branch If ACIA Rx not ready
 	move.l	#1,d0			// Return 1 to indicate data is available
 	movem.l	(a7)+,a0/d1		// Restore working registers
