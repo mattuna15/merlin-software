@@ -116,6 +116,9 @@ restart:
         move.w #$8000,ship_heading
         move.w #0,ship_velocity
         move.b #3,ship_hs_count
+        move.w #$8000,ship_old_heading
+        move.w #0,ship_old_velocity
+
 
 ****************************
 ** ufo setting
@@ -288,7 +291,6 @@ add_ship_laser:
         lea ship_laser_y,a1 
         move.l ship_x,(a0)
         move.l ship_y,(a1)
-
 
         bra draw_shapes
 
@@ -502,15 +504,6 @@ draw_laser:
         pea points
         jsr bullet
         addq.l #4,sp
-
-next_laser:
-
-
-*        adda #2,a1
-*        adda #2,a2
-
-*        dbra d4,laser_loop
-
 
 *************************************************
 ** draw asteroids

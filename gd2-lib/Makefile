@@ -1,4 +1,4 @@
-all: lib speech.run cobra.run mandel.run 
+all: lib speech.run cobra.run mandel.run mouse.srec
 
 speech.run: speech.cpp
 	m68k-elf-g++ -fno-exceptions -fomit-frame-pointer -Wall -m68000 -g -O3 speech.cpp ../fp-lib/ieee754.c -o speech.run  \
@@ -36,12 +36,20 @@ daz.run: daz.c
 			-Wl,--wrap=__adddf3 \
 			-I../fp-lib/ -T ts2.ld -L. -lGD2 -L../FatFs -lMerlinFat -Xlinker -Map=daz.map
 
+mouse.srec: mouse_demo.cpp 
+	m68k-elf-g++ -fno-exceptions -fomit-frame-pointer -Wall -m68000 -g -O3 ../fp-lib/ieee754.c mouse_demo.cpp -o mouse.srec  \
+			-Wl,--wrap=__muldf3 \
+			-Wl,--wrap=__divdf3 \
+			-Wl,--wrap=__subdf3 \
+			-Wl,--wrap=__adddf3 \
+			-I../fp-lib/ -T ts2.ld -L. -lGD2 -L../FatFs -lMerlinFat -Xlinker -Map=mouse.map
+
 lib: libGD2.a
 
 
 libGD2.a: GD2.cpp  GD-c.cpp
 		 
-	m68k-elf-g++ -O3 -fno-exceptions -fomit-frame-pointer -Wall -m68000 -c GD2.cpp GD-c.cpp 
+	m68k-elf-g++ -O3 -fno-exceptions -fomit-frame-pointer -Wall -m68010 -mbitfield -c GD2.cpp GD-c.cpp 
 		 	
 	m68k-elf-ar rcs libGD2.a *.o 
 

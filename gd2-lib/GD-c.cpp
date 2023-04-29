@@ -241,9 +241,11 @@ void addPoint(uint32_t *nextPoint)
     curY += diffY;
 
     GD.ColorA(0xf0 + brightness); // Draw foreground vectors
-    GD.LineWidth(5);
+    GD.LineWidth(brightness-2);
+
     GD.Vertex2f(prevX, prevY);
     GD.Vertex2f(curX, curY);
+
 }
 
 uint32_t polar(int16_t *r, uint16_t *th)
@@ -292,8 +294,6 @@ void bullet(uint32_t *startPoint)
 
     curX = point.vertex16[0];
     curY = point.vertex16[1];
-
-    printf("\r\nx: %d y: %d",curX, curY);
 
     GD.Begin(POINTS);
     GD.VertexFormat(0);
